@@ -9,9 +9,11 @@ namespace TK.Blast
     {
         public static event Action<int> OnLevelStarted;
         public static event Action<int, bool> OnLevelFinished;
+        public static event Action<int> OnMoveCountChanged;
 
         private const string REACHED_LEVEL_INDEX_KEY = "tk.blast.reachedLevelIndex";
         private static int? s_reachedLevelIndex;
+        private static int s_remainingMoves;
 
         private static int ReachedLevelIndex
         {
@@ -32,7 +34,18 @@ namespace TK.Blast
         public static int CurrentLevelNo { get; private set; }
         public static int HighestCompletedLevelNo => ReachedLevelIndex;
         public static int ReachedLevelNo => ReachedLevelIndex + 1;
-        public static int TotalLevelCount => 10; // TODO: will be dynamic
+        public static int TotalLevelCount => LevelLoader.TotalLevelCount;
+
+        public static int RemainingMoves
+        {
+            get => s_remainingMoves;
+            private set
+            {
+                if (s_remainingMoves == value) return;
+                s_remainingMoves = value;
+                OnMoveCountChanged?.Invoke(value);
+            }
+        }
 
         /// <summary>
         /// Sets the reached level number for testing purposes.
@@ -51,7 +64,7 @@ namespace TK.Blast
                 return;
             }
 
-            ReachedLevelIndex = levelNo - 1; // Convert to 0-based index
+            ReachedLevelIndex = levelNo - 1;
         }
 
         public static void StartReachedLevel()
@@ -79,6 +92,17 @@ namespace TK.Blast
                 CurrentLevelNo = levelNo;
                 UIManager.SetDisablerOverlay(true);
 
+                // Load level data
+                var levelData = LevelLoader.LoadLevel(levelNo);
+                if (levelData == null)
+                {
+                    Debug.LogError($"Failed to load level {levelNo}");
+                    return;
+                }
+
+                // Set initial move count
+                RemainingMoves = levelData.MoveCount;
+
                 // Load the level scene additively
                 var loadOperation = SceneManager.LoadSceneAsync(1, LoadSceneMode.Additive);
                 if (loadOperation == null)
@@ -93,9 +117,15 @@ namespace TK.Blast
                     await Task.Yield();
                 }
 
+                // Initialize grid
+                GridManager.Instance.Initialize(levelData);
+
                 // Initialize UI
                 var gameplayLayout = await UIManager.GetUIAsync<GameplayLayout>();
                 await gameplayLayout.ShowAsync();
+
+                // Subscribe to move events
+                GridManager.OnMovePerformed += OnMovePerformed;
 
                 // Notify level start
                 OnLevelStarted?.Invoke(levelNo);
@@ -110,11 +140,22 @@ namespace TK.Blast
             }
         }
 
+        private static void OnMovePerformed()
+        {
+            RemainingMoves--;
+            if (RemainingMoves <= 0)
+            {
+                FinishLevel(false);
+            }
+        }
+
         public static async void FinishLevel(bool isSucceed)
         {
             try
             {
                 UIManager.SetDisablerOverlay(true);
+                GridManager.OnMovePerformed -= OnMovePerformed;
+
                 if (isSucceed) await HandleWinAsync();
                 else await HandleLoseAsync();
 
