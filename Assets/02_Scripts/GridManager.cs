@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using DG.Tweening;
 using UnityEngine;
 
@@ -8,17 +9,28 @@ namespace TK.Blast
     public class GridManager : SingletonBehaviour<GridManager>
     {
         public static event Action OnMovePerformed;
-        public static event Action<Type> OnCellCleared;
+        public static event Action<GridElementType> OnCellCleared;
 
         [SerializeField] private SpriteRenderer border;
 
         private const float CELL_SIZE = 1.42f;
         private const float BORDER_PADDING_X = 0.3f;
         private const float BORDER_PADDING_Y = 0.5f;
+        private const float SPAWN_HEIGHT_OFFSET = 3f;
+
+        private static readonly Vector2Int[] s_adjacentDirections =
+        {
+            new(0, 1), // Up
+            new(1, 0), // Right
+            new(0, -1), // Down
+            new(-1, 0) // Left
+        };
 
         private GridElementBase[,] _grid;
         private Vector2[,] _coordinates;
-        private readonly List<Vector2Int> _matchedCoordinates = new();
+        private readonly HashSet<Vector2Int> _matchedCoordinates = new();
+        private readonly Queue<Vector2Int> _matchQueue = new();
+        private readonly List<Vector2Int> _emptyPositions = new();
 
         private int GridSizeX => _grid.GetLength(0);
         private int GridSizeY => _grid.GetLength(1);
@@ -136,186 +148,195 @@ namespace TK.Blast
             }
         }
 
-        public void PerformRocket(Rocket rocket)
-        {
-            var coords1 = new List<Vector2Int>();
-            var coords2 = new List<Vector2Int>();
-            var sourceCoord = _grid.CoordinatesOf(rocket);
-            _grid[sourceCoord.x, sourceCoord.y] = null;
-
-            switch (rocket.Direction)
-            {
-                case RocketDirection.Horizontal:
-                {
-                    for (var x = sourceCoord.x - 1; x >= 0; x--)
-                    {
-                        coords1.Add(new Vector2Int(x, sourceCoord.y));
-                    }
-
-                    for (var x = sourceCoord.x + 1; x < GridSizeX; x++)
-                    {
-                        coords2.Add(new Vector2Int(x, sourceCoord.y));
-                    }
-
-                    break;
-                }
-                case RocketDirection.Vertical:
-                {
-                    for (var y = sourceCoord.y - 1; y >= 0; y--)
-                    {
-                        coords1.Add(new Vector2Int(sourceCoord.x, y));
-                    }
-
-                    for (var y = sourceCoord.y + 1; y < GridSizeY; y++)
-                    {
-                        coords2.Add(new Vector2Int(sourceCoord.x, y));
-                    }
-
-                    break;
-                }
-                default:
-                    throw new ArgumentOutOfRangeException();
-            }
-
-            var seq = DOTween.Sequence();
-            for (var i = 0; i < coords1.Count; i++)
-            {
-                var coord = coords1[i];
-                seq.Join(DOVirtual.DelayedCall(0.05f * i, () => { ClearCell(coord); }));
-            }
-
-            for (var i = 0; i < coords2.Count; i++)
-            {
-                var coord = coords2[i];
-                seq.Join(DOVirtual.DelayedCall(0.05f * i, () => { ClearCell(coord); }));
-            }
-
-            seq.OnComplete(Fall);
-            OnMovePerformed?.Invoke();
-        }
-
         public void PerformMatching(GridElementBase sourceGridElement)
         {
             _matchedCoordinates.Clear();
 
             var sourceCoord = _grid.CoordinatesOf(sourceGridElement);
-            RecursiveMatch(sourceCoord, sourceCoord);
-
-            var matchedCubeCount = _matchedCoordinates
-                .FindAll(a => _grid[a.x, a.y]?.GetType().IsSubclassOf(typeof(Cube)) ?? false).Count;
-
-            if (matchedCubeCount < 2)
+            if (!IsValidCoordinate(sourceCoord))
             {
+                Debug.LogError("Invalid source coordinate for matching");
                 return;
             }
 
+            FindMatchingElements(sourceCoord);
+
+            // Only match if we have at least 2 matching cubes (including source)
+            var matchedCubeCount = _matchedCoordinates.Count(coord =>
+            {
+                var element = _grid[coord.x, coord.y];
+                return element && element.ElementType.IsCube();
+            });
+
+            if (matchedCubeCount < 2) return;
+
+            // Clear matched cells
             foreach (var coord in _matchedCoordinates)
             {
                 ClearCell(coord);
             }
 
+            // Create rocket if 5 or more cubes matched
             if (matchedCubeCount >= 5)
             {
                 var rocketPrefab = GridElementFactory.CreateRandomRocket();
-                var r = Instantiate(rocketPrefab, _coordinates[sourceCoord.x, sourceCoord.y], Quaternion.identity,
+                var rocket = Instantiate(rocketPrefab, _coordinates[sourceCoord.x, sourceCoord.y], Quaternion.identity,
                     border.transform);
-                _grid[sourceCoord.x, sourceCoord.y] = r;
+                _grid[sourceCoord.x, sourceCoord.y] = rocket;
             }
 
             Fall();
             OnMovePerformed?.Invoke();
         }
 
-        private void RecursiveMatch(Vector2Int sourceCoord, Vector2Int currentCoord)
+        private void FindMatchingElements(Vector2Int sourceCoord)
         {
-            // Check if the current position is out of bounds
-            if (currentCoord.x < 0 || currentCoord.x >= GridSizeX || currentCoord.y < 0 || currentCoord.y >= GridSizeY)
-            {
-                return;
-            }
+            var sourceElement = _grid[sourceCoord.x, sourceCoord.y];
+            if (!sourceElement || !sourceElement.IsActive) return;
 
-            // Check if the current object is null or not active
-            var currentObj = _grid[currentCoord.x, currentCoord.y];
-            if (!currentObj || !currentObj.IsActive)
-            {
-                return;
-            }
+            _matchQueue.Clear();
+            _matchQueue.Enqueue(sourceCoord);
+            _matchedCoordinates.Add(sourceCoord);
 
-            if (!_grid[sourceCoord.x, sourceCoord.y].MatchTypes.Contains(currentObj.GetType()))
+            while (_matchQueue.Count > 0)
             {
-                return;
-            }
+                var current = _matchQueue.Dequeue();
+                foreach (var direction in s_adjacentDirections)
+                {
+                    var neighbor = current + direction;
+                    if (!IsValidMatch(sourceElement, neighbor)) continue;
 
-            if (!_matchedCoordinates.Contains(currentCoord))
-            {
-                _matchedCoordinates.Add(currentCoord);
-
-                // Recursive calls for adjacent objects (up, down, left, right)
-                RecursiveMatch(currentCoord, new Vector2Int(currentCoord.x, currentCoord.y + 1));
-                RecursiveMatch(currentCoord, new Vector2Int(currentCoord.x, currentCoord.y - 1));
-                RecursiveMatch(currentCoord, new Vector2Int(currentCoord.x + 1, currentCoord.y));
-                RecursiveMatch(currentCoord, new Vector2Int(currentCoord.x - 1, currentCoord.y));
+                    _matchedCoordinates.Add(neighbor);
+                    _matchQueue.Enqueue(neighbor);
+                }
             }
+        }
+
+        private bool IsValidMatch(GridElementBase sourceElement, Vector2Int coord)
+        {
+            if (!IsValidCoordinate(coord) || _matchedCoordinates.Contains(coord))
+                return false;
+
+            var element = _grid[coord.x, coord.y];
+            if (!element || !element.IsActive)
+                return false;
+
+            return sourceElement.MatchTypes.Contains(element.ElementType);
+        }
+
+        private bool IsValidCoordinate(Vector2Int coord)
+        {
+            return coord.x >= 0 && coord.x < GridSizeX && coord.y >= 0 && coord.y < GridSizeY;
         }
 
         private void Fall()
         {
             var seq = DOTween.Sequence();
+            _emptyPositions.Clear();
+            CollectEmptyPositions();
 
+            if (_emptyPositions.Count == 0) return;
+
+            // Process each column
             for (var x = 0; x < GridSizeX; x++)
             {
-                for (var y = 1; y < GridSizeY; y++)
-                {
-                    if (_grid[x, y] != null && _grid[x, y - 1] == null)
-                    {
-                        // Move the game object one step down
-                        var obj = _grid[x, y];
-                        seq.Join(obj.Move(_coordinates[x, y - 1]));
-                        _grid[x, y - 1] = _grid[x, y];
-                        _grid[x, y] = null;
-                        y = Mathf.Max(y - 2, 0); // Check the same position again for multiple empty spaces in a column
-                    }
-                }
+                ProcessColumn(x, seq);
             }
 
-            seq.OnComplete(FillEmptyCells);
+            seq.OnComplete(AdjustSortingOrders);
         }
 
-        private void FillEmptyCells()
+        private void CollectEmptyPositions()
         {
             for (var x = 0; x < GridSizeX; x++)
             {
-                for (var y = GridSizeY - 1; y >= 0; y--)
+                for (var y = 0; y < GridSizeY; y++)
                 {
                     if (!_grid[x, y])
                     {
-                        Vector3 targetPos = _coordinates[x, y];
-                        Vector3 spawnPos = new Vector2(targetPos.x, 3);
-
-                        var element = GridElementFactory.CreateRandomCube();
-                        if (!element)
-                        {
-                            Debug.LogError($"Failed to create random element at position ({x}, {y})");
-                            continue;
-                        }
-
-                        var obj = Instantiate(element, spawnPos, Quaternion.identity, border.transform);
-                        obj.Move(targetPos, Ease.OutBounce);
-                        _grid[x, y] = obj;
+                        _emptyPositions.Add(new Vector2Int(x, y));
                     }
                 }
             }
+        }
 
-            AdjustSortingOrders();
+        private void ProcessColumn(int x, Sequence seq)
+        {
+            var columnEmptySpaces = CountEmptySpacesInColumn(x);
+            if (columnEmptySpaces == 0) return;
+
+            MoveExistingElementsDown(x, seq);
+            FillEmptySpaces(x, columnEmptySpaces, seq);
+        }
+
+        private int CountEmptySpacesInColumn(int x)
+        {
+            var count = 0;
+            for (var y = 0; y < GridSizeY; y++)
+            {
+                if (!_grid[x, y]) count++;
+            }
+
+            return count;
+        }
+
+        private void MoveExistingElementsDown(int x, Sequence seq)
+        {
+            for (var y = 0; y < GridSizeY; y++)
+            {
+                if (!_grid[x, y]) continue;
+
+                var emptySpacesBelow = CountEmptySpacesBelow(x, y);
+                if (emptySpacesBelow == 0) continue;
+
+                var element = _grid[x, y];
+                var newY = y - emptySpacesBelow;
+
+                seq.Join(element.Move(_coordinates[x, newY]));
+                _grid[x, newY] = element;
+                _grid[x, y] = null;
+            }
+        }
+
+        private int CountEmptySpacesBelow(int x, int targetY)
+        {
+            var count = 0;
+            for (var y = 0; y < targetY; y++)
+            {
+                if (!_grid[x, y]) count++;
+            }
+
+            return count;
+        }
+
+        private void FillEmptySpaces(int x, int columnEmptySpaces, Sequence seq)
+        {
+            for (var i = 0; i < columnEmptySpaces; i++)
+            {
+                var y = GridSizeY - 1 - i;
+                var targetPos = _coordinates[x, y];
+                var spawnPos = targetPos + Vector2.up * SPAWN_HEIGHT_OFFSET;
+
+                var element = GridElementFactory.CreateRandomCube();
+                if (!element)
+                {
+                    Debug.LogError($"Failed to create random element at position ({x}, {y})");
+                    continue;
+                }
+
+                var obj = Instantiate(element, spawnPos, Quaternion.identity, border.transform);
+                seq.Join(obj.Move(targetPos));
+                _grid[x, y] = obj;
+            }
         }
 
         private void ClearCell(Vector2Int coord)
         {
             var matchedObject = _grid[coord.x, coord.y];
-            if (matchedObject == null) return;
+            if (!matchedObject) return;
 
             _grid[coord.x, coord.y] = null;
-            OnCellCleared?.Invoke(matchedObject.GetType());
+            OnCellCleared?.Invoke(matchedObject.ElementType);
             matchedObject.Destroy();
         }
     }

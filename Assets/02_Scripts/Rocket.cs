@@ -2,56 +2,30 @@ using System;
 using System.Collections.Generic;
 using DG.Tweening;
 using UnityEngine;
-using UnityEngine.EventSystems;
-using Random = UnityEngine.Random;
 
 namespace TK.Blast
 {
-    public enum RocketDirection
+    public class Rocket : GridElementBase
     {
-        Horizontal,
-        Vertical
-    }
+        public override List<GridElementType> MatchTypes => new();
 
-    public class Rocket : GridElementBase, IPointerClickHandler
-    {
-        public override List<Type> MatchTypes => new();
-
-        public RocketDirection Direction { get; private set; }
         [SerializeField] private Transform rocketRight;
         [SerializeField] private Transform rocketLeft;
         [SerializeField] private ParticleSystem[] trailFxs;
 
-        private void Awake()
+        protected override void OnClick()
         {
-            if (Random.Range(0, 2) == 0)
-            {
-                Direction = RocketDirection.Horizontal;
-            }
-            else
-            {
-                Direction = RocketDirection.Vertical;
-                transform.rotation = Quaternion.Euler(0, 0, 90);
-            }
-        }
-
-        public void OnPointerClick(PointerEventData eventData)
-        {
-            if (!IsActive)
-            {
-                return;
-            }
-
+            base.OnClick();
             IsActive = false;
 
             var seq = DOTween.Sequence().SetEase(Ease.Linear);
-            switch (Direction)
+            switch (ElementType)
             {
-                case RocketDirection.Horizontal:
+                case GridElementType.HorizontalRocket:
                     seq.Join(rocketRight.DOMoveX(10, (10 - rocketRight.transform.position.x) / 10f))
                         .Join(rocketLeft.DOMoveX(-10, (10 + rocketLeft.transform.position.x) / 10f));
                     break;
-                case RocketDirection.Vertical:
+                case GridElementType.VerticalRocket:
                     seq.Join(rocketRight.DOMoveY(10, (10 - rocketRight.transform.position.y) / 10f))
                         .Join(rocketLeft.DOMoveY(-10, (10 + rocketLeft.transform.position.y) / 10f));
                     break;
@@ -65,7 +39,7 @@ namespace TK.Blast
             }
 
             seq.OnComplete(Destroy);
-            GridManager.Instance.PerformRocket(this);
+            // GridManager.Instance.PerformRocket(this);
         }
     }
 }

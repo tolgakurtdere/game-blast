@@ -1,30 +1,22 @@
-using System;
 using System.Collections.Generic;
-using UnityEngine;
-using UnityEngine.EventSystems;
 
 namespace TK.Blast
 {
-    [RequireComponent(typeof(Collider2D))]
-    public class Cube : GridElementBase, IPointerClickHandler
+    public class Cube : GridElementBase
     {
-        public override List<Type> MatchTypes => new() { GetType() };
-        [SerializeField] private ParticleSystem crackFx;
+        public override List<GridElementType> MatchTypes => new() { ElementType };
 
-        public void OnPointerClick(PointerEventData eventData)
+        // [SerializeField] private ParticleSystem crackFx;
+        protected override void OnClick()
         {
-            if (!IsActive)
-            {
-                return;
-            }
-
+            base.OnClick();
             GridManager.Instance.PerformMatching(this);
         }
 
         public override void Destroy()
         {
-            crackFx.transform.SetParent(null);
-            crackFx.Play();
+            // crackFx.transform.SetParent(null);
+            // crackFx.Play();
 
             base.Destroy();
         }
