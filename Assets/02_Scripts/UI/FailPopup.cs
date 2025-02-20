@@ -25,7 +25,7 @@ namespace TK.Blast
         private async void OnTryAgainClicked()
         {
             await HideAsync();
-            LevelManager.StartReachedLevel();
+            LevelManager.RestartLevel();
         }
 
         private async void OnCloseClicked()

@@ -93,9 +93,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   elementType: 3
-  destroySfx: {fileID: 0}
-  sprite: {fileID: 0}
-  crackFx: {fileID: 0}
+  rocketState: {fileID: 6090080599973395561, guid: 6c1a6994d754f40e194e6b71d20515eb, type: 3}
 --- !u!1 &6197204634026042425
 GameObject:
   m_ObjectHideFlags: 0

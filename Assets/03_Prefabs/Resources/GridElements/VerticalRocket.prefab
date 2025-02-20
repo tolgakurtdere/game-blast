@@ -331,7 +331,7 @@ BoxCollider2D:
   m_UsedByEffector: 0
   m_CompositeOperation: 0
   m_CompositeOrder: 0
-  m_Offset: {x: 0, y: 0}
+  m_Offset: {x: 0, y: -0.1}
   m_SpriteTilingProperty:
     border: {x: 0, y: 0, z: 0, w: 0}
     pivot: {x: 0, y: 0}
@@ -356,8 +356,5 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   elementType: 4
-  destroySfx: {fileID: 0}
-  sprite: {fileID: 0}
   rocketRight: {fileID: 6161238016551654842}
   rocketLeft: {fileID: 5994014199667181098}
-  trailFxs: []

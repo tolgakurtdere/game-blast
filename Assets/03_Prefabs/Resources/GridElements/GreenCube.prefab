@@ -180,6 +180,4 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   elementType: 1
-  destroySfx: {fileID: 0}
-  sprite: {fileID: 0}
-  crackFx: {fileID: 0}
+  rocketState: {fileID: -8149426069742796037, guid: 5aefc86a3ab1f4074883b33269d85f08, type: 3}

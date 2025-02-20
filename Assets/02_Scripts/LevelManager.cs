@@ -67,6 +67,19 @@ namespace TK.Blast
             ReachedLevelIndex = levelNo - 1;
         }
 
+        public static async void RestartLevel()
+        {
+            try
+            {
+                await SceneManager.UnloadSceneAsync(1);
+                StartReachedLevel();
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"Error restarting level: {e.Message}");
+            }
+        }
+
         public static void StartReachedLevel()
         {
             var levelNo = ReachedLevelNo;
@@ -179,12 +192,8 @@ namespace TK.Blast
             // Play celebration particles
             await ParticleManager.PlayCelebrationAsync();
 
-            // Show HomeLayout (will automatically hide GameplayLayout)
-            var homeLayout = await UIManager.GetUIAsync<HomeLayout>();
-            await homeLayout.ShowAsync();
-
             // Return to main scene
-            await SceneManager.UnloadSceneAsync(1);
+            await ReturnToMainMenuAsync();
         }
 
         private static async Task HandleLoseAsync()
