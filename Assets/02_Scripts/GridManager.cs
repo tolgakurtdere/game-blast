@@ -95,12 +95,19 @@ namespace TK.Blast
             {
                 for (var x = 0; x < GridWidth; x++)
                 {
-                    CreateGridElement(x, y, gridElements, centerPosition, gridOffset, cellOffset);
+                    var elementPrefab = gridElements[x, y];
+                    if (!elementPrefab)
+                    {
+                        Debug.LogError($"Null element found at position ({x}, {y}). This should not happen!");
+                        return;
+                    }
+
+                    CreateGridElement(x, y, elementPrefab, centerPosition, gridOffset, cellOffset);
                 }
             }
         }
 
-        private void CreateGridElement(int x, int y, GridElementBase[,] gridElements, Vector2 centerPosition,
+        private void CreateGridElement(int x, int y, GridElementBase elementPrefab, Vector2 centerPosition,
             Vector2 gridOffset, Vector2 cellOffset)
         {
             var spawnPosition = centerPosition + new Vector2(
@@ -108,13 +115,6 @@ namespace TK.Blast
                 (y - gridOffset.y) * CELL_SIZE + cellOffset.y
             );
             _coordinates[x, y] = spawnPosition;
-
-            var elementPrefab = gridElements[x, y];
-            if (!elementPrefab)
-            {
-                Debug.LogError($"Null element found at position ({x}, {y}). This should not happen!");
-                return;
-            }
 
             var element = Instantiate(elementPrefab, spawnPosition, Quaternion.identity, border.transform);
             element.SetCoordinate(new Vector2Int(x, y));
@@ -132,10 +132,7 @@ namespace TK.Blast
                 for (var y = 0; y < GridHeight; y++)
                 {
                     var gridElement = _grid[x, y];
-                    if (gridElement)
-                    {
-                        gridElement.SetSortingOrder(y);
-                    }
+                    if (gridElement) gridElement.SetSortingOrder(y);
                 }
             }
         }
