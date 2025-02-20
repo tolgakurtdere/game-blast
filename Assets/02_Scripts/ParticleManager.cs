@@ -3,27 +3,15 @@ using System.Threading.Tasks;
 
 namespace TK.Blast
 {
-    public class ParticleManager : MonoBehaviour
+    public class ParticleManager : SingletonBehaviour<ParticleManager>
     {
         [SerializeField] private ParticleSystem celebrationParticles;
-        private static ParticleManager Instance { get; set; }
-
-        private void Awake()
-        {
-            if (Instance != null)
-            {
-                Destroy(gameObject);
-                return;
-            }
-
-            Instance = this;
-            DontDestroyOnLoad(gameObject);
-        }
 
         public static async Task PlayCelebrationAsync()
         {
-            if (Instance?.celebrationParticles == null)
+            if (!Instance?.celebrationParticles)
             {
+                await Task.Delay(5000);
                 Debug.LogWarning("Celebration particles not assigned!");
                 return;
             }
@@ -34,14 +22,6 @@ namespace TK.Blast
             // Wait for particles to finish
             await Task.Delay((int)(Instance.celebrationParticles.main.duration * 1000));
             Instance.celebrationParticles.gameObject.SetActive(false);
-        }
-
-        private void OnDestroy()
-        {
-            if (Instance == this)
-            {
-                Instance = null;
-            }
         }
     }
 }

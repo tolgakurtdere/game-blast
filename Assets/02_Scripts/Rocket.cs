@@ -16,8 +16,8 @@ namespace TK.Blast
 
         [SerializeField] private Transform rocketRight;
         [SerializeField] private Transform rocketLeft;
-        private const float EXPLOSION_SPEED = 1f;
-        private const float EXPLOSION_DISTANCE = 10f;
+        private const float EXPLOSION_SPEED = 0.5f;
+        private const float EXPLOSION_DISTANCE = 15f;
 
         protected override void OnClick()
         {
@@ -48,50 +48,83 @@ namespace TK.Blast
                     throw new ArgumentOutOfRangeException(nameof(ElementType), ElementType, "Invalid rocket type");
             }
 
-            await seq.AsyncWaitForCompletion();
+            try
+            {
+                await seq.AsyncWaitForCompletionWithCancellation(destroyCancellationToken);
+            }
+            catch (TaskCanceledException)
+            {
+                seq.Kill();
+                return true;
+            }
+
             Destroy();
             return true;
         }
 
         private void AnimateHorizontalRocket(Sequence seq, Vector2Int sourceCoord)
         {
+            var rightTargets = new List<Vector2Int>();
+            var leftTargets = new List<Vector2Int>();
+            var gridCenter = GridManager.Instance.GridCenter;
+
             // Animate right part
-            seq.Join(rocketRight.DOMoveX(EXPLOSION_DISTANCE, EXPLOSION_SPEED)
+            seq.Join(rocketRight.DOMoveX(gridCenter.x + EXPLOSION_DISTANCE, EXPLOSION_SPEED)
                 .OnUpdate(() =>
                 {
                     var currentX = Mathf.RoundToInt((rocketRight.position.x - transform.position.x) / GridManager.CELL_SIZE);
                     var targetCoord = new Vector2Int(sourceCoord.x + currentX, sourceCoord.y);
-                    GridManager.Instance.TryPerformCell(targetCoord);
+                    if (!rightTargets.Contains(targetCoord))
+                    {
+                        rightTargets.Add(targetCoord);
+                        GridManager.Instance.TryPerformCell(targetCoord);
+                    }
                 }));
 
             // Animate left part
-            seq.Join(rocketLeft.DOMoveX(-EXPLOSION_DISTANCE, EXPLOSION_SPEED)
+            seq.Join(rocketLeft.DOMoveX(gridCenter.x - EXPLOSION_DISTANCE, EXPLOSION_SPEED)
                 .OnUpdate(() =>
                 {
                     var currentX = Mathf.RoundToInt((rocketLeft.position.x - transform.position.x) / GridManager.CELL_SIZE);
                     var targetCoord = new Vector2Int(sourceCoord.x + currentX, sourceCoord.y);
-                    GridManager.Instance.TryPerformCell(targetCoord);
+                    if (!leftTargets.Contains(targetCoord))
+                    {
+                        leftTargets.Add(targetCoord);
+                        GridManager.Instance.TryPerformCell(targetCoord);
+                    }
                 }));
         }
 
         private void AnimateVerticalRocket(Sequence seq, Vector2Int sourceCoord)
         {
+            var upTargets = new List<Vector2Int>();
+            var downTargets = new List<Vector2Int>();
+            var gridCenter = GridManager.Instance.GridCenter;
+
             // Animate up part
-            seq.Join(rocketRight.DOMoveY(EXPLOSION_DISTANCE, EXPLOSION_SPEED)
+            seq.Join(rocketRight.DOMoveY(gridCenter.y + EXPLOSION_DISTANCE, EXPLOSION_SPEED)
                 .OnUpdate(() =>
                 {
                     var currentY = Mathf.RoundToInt((rocketRight.position.y - transform.position.y) / GridManager.CELL_SIZE);
                     var targetCoord = new Vector2Int(sourceCoord.x, sourceCoord.y + currentY);
-                    GridManager.Instance.TryPerformCell(targetCoord);
+                    if (!upTargets.Contains(targetCoord))
+                    {
+                        upTargets.Add(targetCoord);
+                        GridManager.Instance.TryPerformCell(targetCoord);
+                    }
                 }));
 
             // Animate down part
-            seq.Join(rocketLeft.DOMoveY(-EXPLOSION_DISTANCE, EXPLOSION_SPEED)
+            seq.Join(rocketLeft.DOMoveY(gridCenter.y - EXPLOSION_DISTANCE, EXPLOSION_SPEED)
                 .OnUpdate(() =>
                 {
                     var currentY = Mathf.RoundToInt((rocketLeft.position.y - transform.position.y) / GridManager.CELL_SIZE);
                     var targetCoord = new Vector2Int(sourceCoord.x, sourceCoord.y + currentY);
-                    GridManager.Instance.TryPerformCell(targetCoord);
+                    if (!downTargets.Contains(targetCoord))
+                    {
+                        downTargets.Add(targetCoord);
+                        GridManager.Instance.TryPerformCell(targetCoord);
+                    }
                 }));
         }
     }

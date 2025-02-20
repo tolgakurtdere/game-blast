@@ -38,19 +38,23 @@ namespace TK.Blast
         public void SetCoordinate(Vector2Int newCoordinate)
         {
             Coordinate = newCoordinate;
+            SpriteRenderer.sortingOrder = newCoordinate.y;
         }
 
-        public void SetSortingOrder(int order)
+        public Tween Move(Vector2 to, Ease ease = Ease.InOutSine, float duration = 0.3f)
         {
-            SpriteRenderer.sortingOrder = order;
+            return MoveInternal(to, duration).SetEase(ease);
         }
 
-        public Tween Move(Vector2 to, Ease ease = Ease.InOutSine)
+        public Tween Move(Vector2 to, AnimationCurve animationCurve, float duration = 0.3f)
+        {
+            return MoveInternal(to, duration).SetEase(animationCurve);
+        }
+
+        private Tween MoveInternal(Vector2 to, float duration)
         {
             IsActive = false;
-            return transform.DOMove(to, 0.2f)
-                .SetEase(ease)
-                .OnComplete(() => { IsActive = true; });
+            return transform.DOMove(to, duration).OnComplete(() => { IsActive = true; });
         }
 
         public abstract Task<bool> Perform();

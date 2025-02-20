@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -10,6 +12,7 @@ namespace TK.Blast
         public static event Action<int> OnLevelStarted;
         public static event Action<int, bool> OnLevelFinished;
         public static event Action<int> OnMoveCountChanged;
+        public static event Action<GridElementType> OnObstacleCountChanged;
 
         private const string REACHED_LEVEL_INDEX_KEY = "tk.blast.reachedLevelIndex";
         private static int? s_reachedLevelIndex;
@@ -35,6 +38,7 @@ namespace TK.Blast
         public static int HighestCompletedLevelNo => ReachedLevelIndex;
         public static int ReachedLevelNo => ReachedLevelIndex + 1;
         public static int TotalLevelCount => LevelLoader.TotalLevelCount;
+        private static Dictionary<GridElementType, int> s_goalsDict;
 
         public static int RemainingMoveCount
         {
@@ -113,9 +117,6 @@ namespace TK.Blast
                     return;
                 }
 
-                // Set initial move count
-                RemainingMoveCount = levelData.MoveCount;
-
                 // Load the level scene additively
                 var loadOperation = SceneManager.LoadSceneAsync(1, LoadSceneMode.Additive);
                 if (loadOperation == null)
@@ -133,13 +134,31 @@ namespace TK.Blast
                 // Initialize grid
                 GridManager.Instance.Initialize(levelData);
 
+                // Set initial move count
+                RemainingMoveCount = levelData.MoveCount;
+
+                // Initialize goals
+                s_goalsDict = new Dictionary<GridElementType, int>();
+                foreach (var elementCode in levelData.Grid)
+                {
+                    var elementType = LevelLoader.ParseElementType(elementCode);
+                    if (elementType == null || !elementType.Value.IsObstacle()) continue;
+
+                    if (!s_goalsDict.TryAdd(elementType.Value, 1))
+                    {
+                        s_goalsDict[elementType.Value]++;
+                    }
+                }
+
                 // Initialize UI
                 var gameplayLayout = await UIManager.GetUIAsync<GameplayLayout>();
-                gameplayLayout.Init(RemainingMoveCount);
+                gameplayLayout.Init(RemainingMoveCount, s_goalsDict);
                 await gameplayLayout.ShowAsync();
+
 
                 // Subscribe to move events
                 GridManager.OnMovePerformed += OnMovePerformed;
+                GridManager.OnCellCleared += OnCellCleared;
 
                 // Notify level start
                 OnLevelStarted?.Invoke(levelNo);
@@ -163,12 +182,29 @@ namespace TK.Blast
             }
         }
 
+        private static void OnCellCleared(GridElementType elementType)
+        {
+            if (!elementType.IsObstacle()) return;
+            if (!s_goalsDict.ContainsKey(elementType)) return;
+
+            var count = --s_goalsDict[elementType];
+            if (count == 0) s_goalsDict.Remove(elementType);
+
+            OnObstacleCountChanged?.Invoke(elementType);
+            if (s_goalsDict.Count == 0) // if all goals are completed
+            {
+                FinishLevel(true);
+            }
+        }
+
         public static async void FinishLevel(bool isSucceed)
         {
             try
             {
                 UIManager.SetDisablerOverlay(true);
+
                 GridManager.OnMovePerformed -= OnMovePerformed;
+                GridManager.OnCellCleared -= OnCellCleared;
 
                 if (isSucceed) await HandleWinAsync();
                 else await HandleLoseAsync();

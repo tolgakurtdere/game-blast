@@ -36,6 +36,12 @@ namespace TK.Blast
             return CreateElement(rocketType);
         }
 
+        public static Sprite GetSprite(GridElementType elementType)
+        {
+            var prefab = LoadPrefab(elementType);
+            return !prefab ? null : prefab.GetComponentInChildren<SpriteRenderer>()?.sprite;
+        }
+
         private static GridElementBase LoadPrefab(GridElementType elementType)
         {
             if (!s_prefabCache.TryGetValue(elementType, out var prefab) || !prefab)

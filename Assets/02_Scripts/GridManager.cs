@@ -11,14 +11,16 @@ namespace TK.Blast
     public class GridManager : SingletonBehaviour<GridManager>
     {
         public static event Action OnMovePerformed;
-        public static event Action<GridElementType> OnCellPerformed;
+        public static event Action<GridElementType> OnCellCleared;
 
         [SerializeField] private SpriteRenderer border;
+        [SerializeField] private AnimationCurve cubeFallEase;
 
         public const float CELL_SIZE = 1.42f;
         private const float BORDER_PADDING_X = 0.3f;
         private const float BORDER_PADDING_Y = 0.5f;
-        private const float SPAWN_HEIGHT_OFFSET = 3f;
+        private const float SPAWN_HEIGHT_OFFSET = 10f;
+        private const int ROCKET_CREATION_COUNT = 4;
 
         private static readonly Vector2Int[] s_adjacentDirections =
         {
@@ -35,6 +37,7 @@ namespace TK.Blast
         private int GridWidth { get; set; }
         private int GridHeight { get; set; }
         public bool IsGridActive { get; private set; }
+        public Vector2 GridCenter => border.transform.position;
 
         private int _activeRocketOperations;
         private bool _isFalling;
@@ -118,23 +121,10 @@ namespace TK.Blast
 
             var element = Instantiate(elementPrefab, spawnPosition, Quaternion.identity, border.transform);
             element.SetCoordinate(new Vector2Int(x, y));
-            element.SetSortingOrder(y);
             _grid[x, y] = element;
 
             // Check for potential rocket matches after element creation
             UpdateRocketIndicators();
-        }
-
-        private void AdjustSortingOrders()
-        {
-            for (var x = 0; x < GridWidth; x++)
-            {
-                for (var y = 0; y < GridHeight; y++)
-                {
-                    var gridElement = _grid[x, y];
-                    if (gridElement) gridElement.SetSortingOrder(y);
-                }
-            }
         }
 
         public async void PerformMatching(Vector2Int sourceCoord)
@@ -157,15 +147,16 @@ namespace TK.Blast
             });
 
             if (matchedCubeCount < 2) return;
+            OnMovePerformed?.Invoke();
 
             // Create rocket if 4 or more cubes matched
-            var shouldCreateRocket = matchedCubeCount >= 4;
+            var shouldCreateRocket = matchedCubeCount >= ROCKET_CREATION_COUNT;
             var seq = DOTween.Sequence();
 
             // Animate matched cubes to source position if creating rocket
             if (shouldCreateRocket)
             {
-                IsGridActive = false; // TODO: tam test edilmedi !!!
+                IsGridActive = false;
                 foreach (var coord in _matchedCoordinates)
                 {
                     if (coord == sourceCoord) continue;
@@ -194,7 +185,6 @@ namespace TK.Blast
             }
 
             await Fall();
-            OnMovePerformed?.Invoke();
         }
 
         public async void PerformRocket(Vector2Int sourceCoord)
@@ -207,11 +197,12 @@ namespace TK.Blast
                 return;
             }
 
+            OnMovePerformed?.Invoke();
+
             IsGridActive = false;
             _activeRocketOperations++;
 
             await PerformCell(sourceCoord);
-            await TryCompleteRocketChain();
         }
 
         private async Task TryCompleteRocketChain()
@@ -221,7 +212,6 @@ namespace TK.Blast
                 _isFalling = true;
                 await Fall();
                 _isFalling = false;
-                OnMovePerformed?.Invoke();
             }
         }
 
@@ -255,9 +245,9 @@ namespace TK.Blast
                     _activeRocketOperations--;
                     await TryCompleteRocketChain();
                 }
-            }
 
-            OnCellPerformed?.Invoke(gridElement.ElementType);
+                OnCellCleared?.Invoke(gridElement.ElementType);
+            }
         }
 
         private void FindMatchingElements(Vector2Int sourceCoord)
@@ -290,7 +280,6 @@ namespace TK.Blast
             }
 
             await seq.AsyncWaitForCompletion();
-            AdjustSortingOrders();
             UpdateRocketIndicators(); // Check for potential rocket matches after falling
 
             IsGridActive = true;
@@ -331,8 +320,8 @@ namespace TK.Blast
                 if (emptySpacesCount == 0) continue;
 
                 var newY = y - emptySpacesCount;
-                seq.Join(element.Move(_coordinates[x, newY]));
                 element.SetCoordinate(new Vector2Int(x, newY));
+                seq.Join(element.Move(_coordinates[x, newY]));
 
                 _grid[x, newY] = element;
                 _grid[x, y] = null;
@@ -356,7 +345,7 @@ namespace TK.Blast
 
                 var cube = Instantiate(element, spawnPos, Quaternion.identity, border.transform);
                 cube.SetCoordinate(new Vector2Int(x, y));
-                seq.Join(cube.Move(targetPos));
+                seq.Join(cube.Move(targetPos, cubeFallEase));
 
                 _grid[x, y] = cube;
             }
@@ -392,9 +381,6 @@ namespace TK.Blast
 
         private void CheckPotentialRocketCreation(Vector2Int coord)
         {
-            var sourceElement = _grid[coord.x, coord.y];
-            if (!sourceElement || !sourceElement.IsActive) return;
-
             var matchedCoords = new HashSet<Vector2Int>();
             FindMatches(coord, (current, neighbor) =>
             {
@@ -403,7 +389,7 @@ namespace TK.Blast
                 return currentElement.ElementType == neighborElement.ElementType;
             }, matchedCoords);
 
-            if (matchedCoords.Count >= 4)
+            if (matchedCoords.Count >= ROCKET_CREATION_COUNT)
             {
                 foreach (var matchCoord in matchedCoords)
                 {
