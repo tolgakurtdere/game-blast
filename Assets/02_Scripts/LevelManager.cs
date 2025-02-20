@@ -13,7 +13,7 @@ namespace TK.Blast
 
         private const string REACHED_LEVEL_INDEX_KEY = "tk.blast.reachedLevelIndex";
         private static int? s_reachedLevelIndex;
-        private static int s_remainingMoves;
+        private static int s_remainingMoveCount;
 
         private static int ReachedLevelIndex
         {
@@ -36,13 +36,13 @@ namespace TK.Blast
         public static int ReachedLevelNo => ReachedLevelIndex + 1;
         public static int TotalLevelCount => LevelLoader.TotalLevelCount;
 
-        public static int RemainingMoves
+        public static int RemainingMoveCount
         {
-            get => s_remainingMoves;
+            get => s_remainingMoveCount;
             private set
             {
-                if (s_remainingMoves == value) return;
-                s_remainingMoves = value;
+                if (s_remainingMoveCount == value) return;
+                s_remainingMoveCount = value;
                 OnMoveCountChanged?.Invoke(value);
             }
         }
@@ -114,7 +114,7 @@ namespace TK.Blast
                 }
 
                 // Set initial move count
-                RemainingMoves = levelData.MoveCount;
+                RemainingMoveCount = levelData.MoveCount;
 
                 // Load the level scene additively
                 var loadOperation = SceneManager.LoadSceneAsync(1, LoadSceneMode.Additive);
@@ -135,6 +135,7 @@ namespace TK.Blast
 
                 // Initialize UI
                 var gameplayLayout = await UIManager.GetUIAsync<GameplayLayout>();
+                gameplayLayout.Init(RemainingMoveCount);
                 await gameplayLayout.ShowAsync();
 
                 // Subscribe to move events
@@ -155,8 +156,8 @@ namespace TK.Blast
 
         private static void OnMovePerformed()
         {
-            RemainingMoves--;
-            if (RemainingMoves <= 0)
+            RemainingMoveCount--;
+            if (RemainingMoveCount <= 0)
             {
                 FinishLevel(false);
             }
