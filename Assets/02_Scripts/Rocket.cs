@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using DG.Tweening;
 using UnityEngine;
@@ -12,8 +11,7 @@ namespace TK.Blast
         [SerializeField] private Transform rocketDefault;
         [SerializeField] private Transform rocketRight;
         [SerializeField] private Transform rocketLeft;
-        private const float EXPLOSION_SPEED = 0.5f;
-        private const float EXPLOSION_DISTANCE = 10f;
+        private const float ANIMATION_UNIT_DURATION = 0.05f;
 
         protected override void OnClick()
         {
@@ -34,101 +32,77 @@ namespace TK.Blast
             rocketLeft.gameObject.SetActive(true);
             Highlight();
 
-            var seq = DOTween.Sequence().SetEase(Ease.Linear);
-
-            // Animate rocket parts based on type and clear cells during movement
-            switch (direction)
+            var tween = direction switch
             {
-                case RocketDirection.Vertical:
-                    AnimateVerticalRocket(seq);
-                    break;
-                case RocketDirection.Horizontal:
-                    AnimateHorizontalRocket(seq);
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(ElementType), ElementType, "Invalid rocket type");
-            }
+                RocketDirection.Vertical => AnimateVerticalRocket(),
+                RocketDirection.Horizontal => AnimateHorizontalRocket(),
+                _ => throw new ArgumentOutOfRangeException()
+            };
 
-            await seq.AsyncWaitForCompletion();
+            await tween.AsyncWaitForCompletion();
 
             Destroy();
             return true;
         }
 
-        private void AnimateHorizontalRocket(Sequence seq)
+        private Tween AnimateHorizontalRocket()
         {
-            var rightTargets = new List<Vector2Int>();
-            var leftTargets = new List<Vector2Int>();
-            var gridCenter = GridManager.Instance.GridCenter;
-            var row = GridManager.Instance.GetRow(Coordinate.y);
-            foreach (var rowIndex in row)
-            {
-                GridManager.Instance.PerformCell(rowIndex);
-            }
-
-            // Animate right part
-            seq.Join(rocketRight.DOMoveX(gridCenter.x + EXPLOSION_DISTANCE, EXPLOSION_SPEED)
-                .OnUpdate(() =>
-                {
-                    var currentX = Mathf.RoundToInt((rocketRight.position.x - transform.position.x) / GridManager.CELL_SIZE);
-                    var targetCoord = new Vector2Int(Coordinate.x + currentX, Coordinate.y);
-                    if (!rightTargets.Contains(targetCoord))
-                    {
-                        rightTargets.Add(targetCoord);
-                        // GridManager.Instance.TryPerformCell(targetCoord);
-                    }
-                }));
-
-            // Animate left part
-            seq.Join(rocketLeft.DOMoveX(gridCenter.x - EXPLOSION_DISTANCE, EXPLOSION_SPEED)
-                .OnUpdate(() =>
-                {
-                    var currentX = Mathf.RoundToInt((rocketLeft.position.x - transform.position.x) / GridManager.CELL_SIZE);
-                    var targetCoord = new Vector2Int(Coordinate.x + currentX, Coordinate.y);
-                    if (!leftTargets.Contains(targetCoord))
-                    {
-                        leftTargets.Add(targetCoord);
-                        // GridManager.Instance.TryPerformCell(targetCoord);
-                    }
-                }));
+            var row = GridManager.Instance.GetRowCoords(Coordinate.y);
+            return AnimateRocket(
+                row,
+                Coordinate.x,
+                (endValue, duration) => rocketRight.DOMoveX(endValue, duration),
+                (endValue, duration) => rocketLeft.DOMoveX(endValue, duration)
+            );
         }
 
-        private void AnimateVerticalRocket(Sequence seq)
+        private Tween AnimateVerticalRocket()
         {
-            var upTargets = new List<Vector2Int>();
-            var downTargets = new List<Vector2Int>();
-            var gridCenter = GridManager.Instance.GridCenter;
-            var column = GridManager.Instance.GetColumn(Coordinate.x);
-            foreach (var columnIndex in column)
+            var column = GridManager.Instance.GetColumnCoords(Coordinate.x);
+            return AnimateRocket(
+                column,
+                Coordinate.y,
+                (endValue, duration) => rocketRight.DOMoveY(endValue, duration),
+                (endValue, duration) => rocketLeft.DOMoveY(endValue, duration)
+            );
+        }
+
+        private Tween AnimateRocket(
+            Vector2Int[] cells,
+            int currentPos,
+            Func<float, float, Tween> rightMoveFunc,
+            Func<float, float, Tween> leftMoveFunc)
+        {
+            var rightSeq = DOTween.Sequence();
+            var leftSeq = DOTween.Sequence();
+
+            // Forward animation
+            for (var i = currentPos + 1; i < cells.Length; i++)
             {
-                GridManager.Instance.PerformCell(columnIndex);
+                var coord = cells[i];
+                var pos = GridManager.Instance.GetCellPosition(coord);
+                rightSeq.Append(rocketRight.DOMove(pos, ANIMATION_UNIT_DURATION)
+                    .OnComplete(() => GridManager.Instance.TryPerformCell(coord)));
             }
 
-            // Animate up part
-            seq.Join(rocketRight.DOMoveY(gridCenter.y + EXPLOSION_DISTANCE, EXPLOSION_SPEED)
-                .OnUpdate(() =>
-                {
-                    var currentY = Mathf.RoundToInt((rocketRight.position.y - transform.position.y) / GridManager.CELL_SIZE);
-                    var targetCoord = new Vector2Int(Coordinate.x, Coordinate.y + currentY);
-                    if (!upTargets.Contains(targetCoord))
-                    {
-                        upTargets.Add(targetCoord);
-                        // GridManager.Instance.TryPerformCell(targetCoord);
-                    }
-                }));
+            // Backward animation
+            for (var i = currentPos - 1; i >= 0; i--)
+            {
+                var coord = cells[i];
+                var pos = GridManager.Instance.GetCellPosition(coord);
+                leftSeq.Append(rocketLeft.DOMove(pos, ANIMATION_UNIT_DURATION)
+                    .OnComplete(() => GridManager.Instance.TryPerformCell(coord)));
+            }
 
-            // Animate down part
-            seq.Join(rocketLeft.DOMoveY(gridCenter.y - EXPLOSION_DISTANCE, EXPLOSION_SPEED)
-                .OnUpdate(() =>
-                {
-                    var currentY = Mathf.RoundToInt((rocketLeft.position.y - transform.position.y) / GridManager.CELL_SIZE);
-                    var targetCoord = new Vector2Int(Coordinate.x, Coordinate.y + currentY);
-                    if (!downTargets.Contains(targetCoord))
-                    {
-                        downTargets.Add(targetCoord);
-                        // GridManager.Instance.TryPerformCell(targetCoord);
-                    }
-                }));
+            // Final animations
+            const float finalDistance = GridManager.CELL_SIZE * 4;
+            const float duration = ANIMATION_UNIT_DURATION * 4;
+            rightSeq.Append(rightMoveFunc(finalDistance, duration).SetRelative())
+                .AppendCallback(() => rocketRight.gameObject.SetActive(false));
+            leftSeq.Append(leftMoveFunc(-finalDistance, duration).SetRelative())
+                .AppendCallback(() => rocketLeft.gameObject.SetActive(false));
+
+            return rightSeq.Insert(0, leftSeq);
         }
     }
 }

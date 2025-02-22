@@ -30,7 +30,7 @@ namespace TK.Blast
         };
 
         private GridElementBase[,] _grid;
-        private Vector2[,] _coordinates;
+        private Vector2[,] _cellPositions;
 
         public int GridWidth { get; private set; }
         public int GridHeight { get; private set; }
@@ -75,7 +75,7 @@ namespace TK.Blast
             GridWidth = levelData.GridWidth;
             GridHeight = levelData.GridHeight;
             _grid = new GridElementBase[GridWidth, GridHeight];
-            _coordinates = new Vector2[GridWidth, GridHeight];
+            _cellPositions = new Vector2[GridWidth, GridHeight];
 
             // Setup Border
             var width = GridWidth * CELL_SIZE + BORDER_PADDING_X;
@@ -114,7 +114,7 @@ namespace TK.Blast
                 (x - gridOffset.x) * CELL_SIZE + cellOffset.x,
                 (y - gridOffset.y) * CELL_SIZE + cellOffset.y
             );
-            _coordinates[x, y] = spawnPosition;
+            _cellPositions[x, y] = spawnPosition;
 
             var element = Instantiate(elementPrefab, spawnPosition, Quaternion.identity, GridTransform);
             element.SetCoordinate(new Vector2Int(x, y));
@@ -163,7 +163,7 @@ namespace TK.Blast
                     if (!element || !element.ElementType.IsCube()) continue;
 
                     element.Highlight();
-                    seq.Join(element.CombineTo(_coordinates[sourceCoord.x, sourceCoord.y]));
+                    seq.Join(element.CombineTo(_cellPositions[sourceCoord.x, sourceCoord.y]));
                 }
             }
 
@@ -172,7 +172,7 @@ namespace TK.Blast
             // Clear matched cells after animation
             foreach (var coord in matchedCoords)
             {
-                await PerformCell(coord, specialItemType == null);
+                await PerformCellAsync(coord, specialItemType == null);
             }
 
             if (specialItemType != null)
@@ -181,7 +181,7 @@ namespace TK.Blast
                 {
                     case GridElementType.Rocket:
                         var rocketPrefab = GridElementFactory.CreateRandomRocket();
-                        var rocket = Instantiate(rocketPrefab, _coordinates[sourceCoord.x, sourceCoord.y],
+                        var rocket = Instantiate(rocketPrefab, _cellPositions[sourceCoord.x, sourceCoord.y],
                             Quaternion.identity, GridTransform);
                         rocket.SetCoordinate(sourceCoord);
                         _grid[sourceCoord.x, sourceCoord.y] = rocket;
@@ -200,10 +200,10 @@ namespace TK.Blast
             OnMovePerformed?.Invoke();
 
             IsGridActive = false;
-            await PerformCell(sourceCoord);
+            await PerformCellAsync(sourceCoord);
         }
 
-        public Vector2Int[] GetRow(int rowIndex)
+        public Vector2Int[] GetRowCoords(int rowIndex)
         {
             if (_grid == null || rowIndex < 0 || rowIndex >= GridHeight)
                 throw new ArgumentOutOfRangeException(nameof(rowIndex));
@@ -219,7 +219,7 @@ namespace TK.Blast
             return row;
         }
 
-        public Vector2Int[] GetColumn(int columnIndex)
+        public Vector2Int[] GetColumnCoords(int columnIndex)
         {
             if (_grid == null || columnIndex < 0 || columnIndex >= GridWidth)
                 throw new ArgumentOutOfRangeException(nameof(columnIndex));
@@ -235,7 +235,29 @@ namespace TK.Blast
             return column;
         }
 
-        public async Task PerformCell(Vector2Int coord, bool vfx = true)
+        public Vector2 GetCellPosition(Vector2Int coord)
+        {
+            if (!IsValidCoordinate(coord))
+            {
+                Debug.LogError($"Invalid coordinate: {coord}");
+                return default;
+            }
+
+            return _cellPositions[coord.x, coord.y];
+        }
+
+        public void TryPerformCell(Vector2Int coord)
+        {
+            if (!IsValidCoordinate(coord))
+            {
+                Debug.LogError("askjkj");
+                return;
+            }
+
+            _ = PerformCellAsync(coord);
+        }
+
+        private async Task PerformCellAsync(Vector2Int coord, bool vfx = true)
         {
             var element = _grid[coord.x, coord.y];
             if (!element || !element.IsActive) return;
@@ -317,7 +339,7 @@ namespace TK.Blast
 
                 var newY = y - emptySpacesCount;
                 element.SetCoordinate(new Vector2Int(x, newY));
-                seq.Join(element.Move(_coordinates[x, newY]));
+                seq.Join(element.Move(_cellPositions[x, newY]));
 
                 _grid[x, newY] = element;
                 _grid[x, y] = null;
@@ -330,7 +352,7 @@ namespace TK.Blast
             for (var i = 0; i < emptySpacesCount; i++)
             {
                 var y = GridHeight - 1 - i;
-                var targetPos = _coordinates[x, y];
+                var targetPos = _cellPositions[x, y];
                 var spawnPos = targetPos + Vector2.up * SPAWN_HEIGHT_OFFSET;
 
                 var element = GridElementFactory.CreateRandomCube();
