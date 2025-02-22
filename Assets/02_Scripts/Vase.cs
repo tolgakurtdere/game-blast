@@ -6,10 +6,9 @@ namespace TK.Blast
     {
         [SerializeField] private Sprite brokenState;
 
-        protected override void Awake()
+        protected override GridElementModel Initialize()
         {
-            base.Awake();
-            Hp = 2;
+            return new ObstacleModel(ObstacleKind.Vase, 2);
         }
 
         protected override void OnHpChanged()

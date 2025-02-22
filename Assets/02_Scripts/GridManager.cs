@@ -11,7 +11,7 @@ namespace TK.Blast
     public class GridManager : SingletonBehaviour<GridManager>
     {
         public static event Action OnMovePerformed;
-        public static event Action<GridElementType> OnCellCleared;
+        public static event Action<GridElementModel> OnCellCleared;
 
         [SerializeField] private SpriteRenderer border;
         [SerializeField] private AnimationCurve cubeFallEase;
@@ -135,7 +135,7 @@ namespace TK.Blast
             {
                 var currentElement = _grid[current.x, current.y];
                 var neighborElement = _grid[neighbor.x, neighbor.y];
-                return currentElement.MatchTypes.Contains(neighborElement.ElementType);
+                return currentElement.CanMatchWith(neighborElement);
             });
 
             // Only match if we have at least 2 matching cubes (including source)
@@ -179,7 +179,7 @@ namespace TK.Blast
             {
                 switch (specialItemType.Value)
                 {
-                    case GridElementType.HorizontalRocket:
+                    case GridElementType.Rocket:
                         var rocketPrefab = GridElementFactory.CreateRandomRocket();
                         var rocket = Instantiate(rocketPrefab, _coordinates[sourceCoord.x, sourceCoord.y],
                             Quaternion.identity, GridTransform);
@@ -259,7 +259,7 @@ namespace TK.Blast
                     }
                 }
 
-                OnCellCleared?.Invoke(element.ElementType);
+                OnCellCleared?.Invoke(element.Model);
             }
         }
 
@@ -382,7 +382,7 @@ namespace TK.Blast
             {
                 var currentElement = _grid[current.x, current.y];
                 var neighborElement = _grid[neighbor.x, neighbor.y];
-                return currentElement.ElementType == neighborElement.ElementType;
+                return currentElement.IsSameWith(neighborElement);
             });
 
             var matchCount = matchedCoords.Count;
@@ -428,7 +428,7 @@ namespace TK.Blast
 
         private GridElementType? DetermineSpecialItemType(int matchCount)
         {
-            return matchCount >= 4 ? GridElementType.HorizontalRocket : null;
+            return matchCount >= 4 ? GridElementType.Rocket : null;
             // TODO: implement bomb and disco ball
         }
     }

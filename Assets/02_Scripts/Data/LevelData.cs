@@ -40,10 +40,10 @@ namespace TK.Blast
                     var index = y * GridWidth + x;
                     if (index >= Grid.Length) continue;
 
-                    var elementType = LevelLoader.ParseElementType(Grid[index]);
-                    gridElements[x, y] = elementType == null
+                    var elementModel = LevelLoader.ParseElement(Grid[index]);
+                    gridElements[x, y] = elementModel == null
                         ? GridElementFactory.CreateRandomCube()
-                        : GridElementFactory.CreateElement(elementType.Value);
+                        : GridElementFactory.CreateElement(elementModel);
                 }
             }
 

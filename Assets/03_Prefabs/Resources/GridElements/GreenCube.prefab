@@ -10,7 +10,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 4206383911130206782, guid: 7ea03e5073d4a46aebbbcbd7d2c15500, type: 3}
       propertyPath: m_Name
-      value: RedCube Variant
+      value: GreenCube
       objectReference: {fileID: 0}
     - target: {fileID: 6411423461071158605, guid: 7ea03e5073d4a46aebbbcbd7d2c15500, type: 3}
       propertyPath: m_LocalPosition.x
@@ -56,6 +56,10 @@ PrefabInstance:
       propertyPath: m_Sprite
       value: 
       objectReference: {fileID: -6099873399732076034, guid: 3c6b4bc392f824a848a5fa0adc63ee0b, type: 3}
+    - target: {fileID: 7613210835880385355, guid: 7ea03e5073d4a46aebbbcbd7d2c15500, type: 3}
+      propertyPath: color
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 7613210835880385355, guid: 7ea03e5073d4a46aebbbcbd7d2c15500, type: 3}
       propertyPath: elementType
       value: 1

@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using DG.Tweening;
 using UnityEngine;
@@ -10,19 +9,22 @@ namespace TK.Blast
     [RequireComponent(typeof(Collider2D))]
     public abstract class GridElementBase : MonoBehaviour, IPointerClickHandler
     {
-        public virtual bool CanFall => true;
-        public abstract List<GridElementType> MatchTypes { get; }
         public bool IsActive { get; protected set; } = true;
 
-        [SerializeField] private GridElementType elementType;
         private SpriteRenderer _spriteRenderer;
-
         protected SpriteRenderer SpriteRenderer => _spriteRenderer ??= GetComponentInChildren<SpriteRenderer>();
-        public GridElementType ElementType => elementType;
-        public Vector2Int Coordinate { get; private set; } = new(-1, -1);
 
-        protected virtual void Awake()
+        public GridElementModel Model { get; private set; }
+        public GridElementType ElementType => Model.ElementType;
+        public bool CanFall => Model.CanFall;
+        public Vector2Int Coordinate => Model.Coordinate;
+
+        protected abstract GridElementModel Initialize();
+        public abstract Task<bool> Perform(bool vfx);
+
+        private void Awake()
         {
+            Model = Initialize();
         }
 
         public void OnPointerClick(PointerEventData eventData)
@@ -35,9 +37,19 @@ namespace TK.Blast
         {
         }
 
+        public bool IsSameWith(GridElementBase other)
+        {
+            return Model.IsSameWith(other.Model);
+        }
+
+        public bool CanMatchWith(GridElementBase other)
+        {
+            return Model.CanMatchWith(other.Model);
+        }
+
         public void SetCoordinate(Vector2Int newCoordinate)
         {
-            Coordinate = newCoordinate;
+            Model.SetCoordinate(newCoordinate);
             SetSortingOrder(newCoordinate.y);
         }
 
@@ -72,8 +84,6 @@ namespace TK.Blast
             IsActive = false;
             return transform.DOMove(to, duration).OnComplete(() => { IsActive = true; });
         }
-
-        public abstract Task<bool> Perform(bool vfx);
 
         public void Destroy()
         {

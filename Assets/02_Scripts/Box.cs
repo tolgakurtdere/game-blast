@@ -2,6 +2,9 @@ namespace TK.Blast
 {
     public class Box : ObstacleBase
     {
-        public override bool CanFall => false;
+        protected override GridElementModel Initialize()
+        {
+            return new ObstacleModel(ObstacleKind.Box, 1, false);
+        }
     }
 }

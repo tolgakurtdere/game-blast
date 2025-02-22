@@ -8,12 +8,7 @@ namespace TK.Blast
 {
     public class Rocket : GridElementBase
     {
-        public override List<GridElementType> MatchTypes => new()
-        {
-            // GridElementType.HorizontalRocket,
-            // GridElementType.VerticalRocket
-        };
-
+        [SerializeField] private RocketDirection direction;
         [SerializeField] private Transform rocketDefault;
         [SerializeField] private Transform rocketRight;
         [SerializeField] private Transform rocketLeft;
@@ -24,6 +19,11 @@ namespace TK.Blast
         {
             base.OnClick();
             GridManager.Instance.PerformRocket(Coordinate);
+        }
+
+        protected override GridElementModel Initialize()
+        {
+            return new RocketModel(direction);
         }
 
         public override async Task<bool> Perform(bool vfx)
@@ -37,13 +37,13 @@ namespace TK.Blast
             var seq = DOTween.Sequence().SetEase(Ease.Linear);
 
             // Animate rocket parts based on type and clear cells during movement
-            switch (ElementType)
+            switch (direction)
             {
-                case GridElementType.HorizontalRocket:
-                    AnimateHorizontalRocket(seq);
-                    break;
-                case GridElementType.VerticalRocket:
+                case RocketDirection.Vertical:
                     AnimateVerticalRocket(seq);
+                    break;
+                case RocketDirection.Horizontal:
+                    AnimateHorizontalRocket(seq);
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(ElementType), ElementType, "Invalid rocket type");
@@ -101,7 +101,6 @@ namespace TK.Blast
             var column = GridManager.Instance.GetColumn(Coordinate.x);
             foreach (var columnIndex in column)
             {
-                Debug.LogError(columnIndex);
                 GridManager.Instance.PerformCell(columnIndex);
             }
 

@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using UnityEngine;
 
@@ -6,13 +5,13 @@ namespace TK.Blast
 {
     public abstract class ObstacleBase : GridElementBase
     {
-        public override List<GridElementType> MatchTypes => new();
-        protected int Hp { get; set; } = 1;
         [SerializeField] private ParticleSystem crackFx;
+        private ObstacleModel ObstacleModel => (ObstacleModel)Model;
+        protected int Hp => ObstacleModel.Hp;
 
         public override Task<bool> Perform(bool vfx)
         {
-            Hp--;
+            ObstacleModel.DecreaseHp();
             OnHpChanged();
 
             crackFx.transform.SetParent(null);

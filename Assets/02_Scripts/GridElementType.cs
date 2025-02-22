@@ -2,12 +2,27 @@ namespace TK.Blast
 {
     public enum GridElementType
     {
-        RedCube,
-        GreenCube,
-        BlueCube,
-        YellowCube,
-        VerticalRocket,
-        HorizontalRocket,
+        Cube,
+        Rocket,
+        Obstacle
+    }
+
+    public enum GridElementColor
+    {
+        Red,
+        Green,
+        Blue,
+        Yellow
+    }
+
+    public enum RocketDirection
+    {
+        Vertical,
+        Horizontal
+    }
+
+    public enum ObstacleKind
+    {
         Box,
         Stone,
         Vase
@@ -17,26 +32,17 @@ namespace TK.Blast
     {
         public static bool IsCube(this GridElementType elementType)
         {
-            return elementType is
-                GridElementType.RedCube or
-                GridElementType.GreenCube or
-                GridElementType.BlueCube or
-                GridElementType.YellowCube;
+            return elementType == GridElementType.Cube;
         }
 
         public static bool IsRocket(this GridElementType elementType)
         {
-            return elementType is
-                GridElementType.VerticalRocket or
-                GridElementType.HorizontalRocket;
+            return elementType == GridElementType.Rocket;
         }
 
         public static bool IsObstacle(this GridElementType elementType)
         {
-            return elementType is
-                GridElementType.Box or
-                GridElementType.Stone or
-                GridElementType.Vase;
+            return elementType == GridElementType.Obstacle;
         }
     }
 }

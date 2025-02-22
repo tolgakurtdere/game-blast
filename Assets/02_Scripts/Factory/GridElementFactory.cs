@@ -6,47 +6,34 @@ namespace TK.Blast
     public static class GridElementFactory
     {
         private const string FOLDER_PATH = "GridElements/";
-        private static readonly Dictionary<GridElementType, GridElementBase> s_prefabCache = new();
+        private static readonly Dictionary<string, GridElementBase> s_pathCache = new();
 
-        private static readonly GridElementType[] s_colorCubes =
+        public static GridElementBase CreateElement(GridElementModel elementModel)
         {
-            GridElementType.RedCube,
-            GridElementType.GreenCube,
-            GridElementType.BlueCube,
-            GridElementType.YellowCube
-        };
-
-        public static GridElementBase CreateElement(GridElementType elementType)
-        {
-            return LoadPrefab(elementType);
+            return LoadPrefab(elementModel.LoadPath);
         }
 
         public static GridElementBase CreateRandomCube()
         {
-            var randomIndex = Random.Range(0, s_colorCubes.Length);
-            var randomCube = s_colorCubes[randomIndex];
-            return CreateElement(randomCube);
+            return CreateElement(CubeModel.GetRandom());
         }
 
         public static GridElementBase CreateRandomRocket()
         {
-            var rocketType = Random.Range(0, 2) == 0
-                ? GridElementType.VerticalRocket
-                : GridElementType.HorizontalRocket;
-            return CreateElement(rocketType);
+            return CreateElement(RocketModel.GetRandom());
         }
 
-        public static Sprite GetSprite(GridElementType elementType)
+        public static Sprite GetSprite(GridElementModel elementModel)
         {
-            var prefab = LoadPrefab(elementType);
+            var prefab = LoadPrefab(elementModel.LoadPath);
             return !prefab ? null : prefab.GetComponentInChildren<SpriteRenderer>()?.sprite;
         }
 
-        private static GridElementBase LoadPrefab(GridElementType elementType)
+        private static GridElementBase LoadPrefab(string elementPath)
         {
-            if (!s_prefabCache.TryGetValue(elementType, out var prefab) || !prefab)
+            if (!s_pathCache.TryGetValue(elementPath, out var prefab) || !prefab)
             {
-                var path = $"{FOLDER_PATH}{elementType}";
+                var path = $"{FOLDER_PATH}{elementPath}";
                 prefab = Resources.Load<GridElementBase>(path);
                 if (!prefab)
                 {
@@ -54,7 +41,7 @@ namespace TK.Blast
                     return null;
                 }
 
-                s_prefabCache[elementType] = prefab;
+                s_pathCache[elementPath] = prefab;
             }
 
             return prefab;
@@ -62,7 +49,7 @@ namespace TK.Blast
 
         public static void UnloadResources()
         {
-            s_prefabCache.Clear();
+            s_pathCache.Clear();
             Resources.UnloadUnusedAssets();
         }
 

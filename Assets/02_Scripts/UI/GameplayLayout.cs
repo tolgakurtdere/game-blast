@@ -9,7 +9,7 @@ namespace TK.Blast
         [SerializeField] private TextMeshProUGUI moveCountText;
         [SerializeField] private RectTransform goalsContent;
         [SerializeField] private GoalDisplayer goalDisplayerPrefab;
-        private readonly Dictionary<GridElementType, GoalDisplayer> _goalDisplayerDict = new();
+        private readonly Dictionary<ObstacleKind, GoalDisplayer> _goalDisplayerDict = new();
 
         private void OnEnable()
         {
@@ -23,7 +23,7 @@ namespace TK.Blast
             LevelManager.OnObstacleCountChanged -= OnObstacleCountChanged;
         }
 
-        public void Init(int moveCount, Dictionary<GridElementType, int> goals)
+        public void Init(int moveCount, Dictionary<ObstacleKind, int> goals)
         {
             SetMoveCountText(moveCount);
 
@@ -34,7 +34,7 @@ namespace TK.Blast
 
             foreach (var (elementType, count) in goals)
             {
-                var sprite = GridElementFactory.GetSprite(elementType);
+                var sprite = GridElementFactory.GetSprite(ObstacleModel.ByType(elementType));
                 if (!_goalDisplayerDict.TryGetValue(elementType, out var goalDisplayer))
                 {
                     goalDisplayer = Instantiate(goalDisplayerPrefab, goalsContent);
@@ -51,7 +51,7 @@ namespace TK.Blast
             moveCountText.text = remainingMoveCount.ToString();
         }
 
-        private void OnObstacleCountChanged(GridElementType elementType)
+        private void OnObstacleCountChanged(ObstacleKind elementType)
         {
             if (_goalDisplayerDict.TryGetValue(elementType, out var goalDisplayer))
                 goalDisplayer.DecreaseCount();

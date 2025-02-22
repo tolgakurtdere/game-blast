@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using UnityEngine;
 
@@ -6,24 +5,22 @@ namespace TK.Blast
 {
     public class Cube : GridElementBase
     {
-        public override List<GridElementType> MatchTypes =>
-            new() { ElementType, GridElementType.Box, GridElementType.Vase };
-
+        [SerializeField] private GridElementColor color;
         [SerializeField] private Sprite rocketState;
         [SerializeField] private ParticleSystem crackFx;
         private Sprite _defaultState;
 
-        protected override void Awake()
+        protected override GridElementModel Initialize()
         {
-            base.Awake();
             _defaultState = SpriteRenderer.sprite;
+            return new CubeModel(color);
         }
 
         public void SetState(GridElementType? elementType = null)
         {
             SpriteRenderer.sprite = elementType switch
             {
-                GridElementType.VerticalRocket or GridElementType.HorizontalRocket => rocketState,
+                GridElementType.Rocket => rocketState,
                 _ => _defaultState
             };
         }

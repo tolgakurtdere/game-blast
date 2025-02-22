@@ -9,29 +9,29 @@ namespace TK.Blast
         private const string LEVELS_PATH = "Settings/Levels";
         private static int? s_totalLevelCount;
 
-        private static readonly Dictionary<string, GridElementType?> s_elementTypes = new()
+        private static readonly Dictionary<string, GridElementModel> s_elementModels = new()
         {
-            { "r", GridElementType.RedCube },
-            { "g", GridElementType.GreenCube },
-            { "b", GridElementType.BlueCube },
-            { "y", GridElementType.YellowCube },
-            { "vro", GridElementType.VerticalRocket },
-            { "hro", GridElementType.HorizontalRocket },
-            { "bo", GridElementType.Box },
-            { "s", GridElementType.Stone },
-            { "v", GridElementType.Vase },
+            { "r", CubeModel.Red },
+            { "g", CubeModel.Green },
+            { "b", CubeModel.Blue },
+            { "y", CubeModel.Yellow },
+            { "vro", RocketModel.Vertical },
+            { "hro", RocketModel.Horizontal },
+            { "bo", ObstacleModel.Box },
+            { "s", ObstacleModel.Stone },
+            { "v", ObstacleModel.Vase },
             { "rand", null }
         };
 
-        public static GridElementType? ParseElementType(string elementType)
+        public static GridElementModel ParseElement(string elementCode)
         {
-            if (!s_elementTypes.TryGetValue(elementType, out var type))
+            if (!s_elementModels.TryGetValue(elementCode, out var model))
             {
-                Debug.LogError($"Invalid element type: {elementType}");
+                Debug.LogError($"Invalid element code: {elementCode}");
                 return null;
             }
 
-            return type;
+            return model;
         }
 
         public static int TotalLevelCount
@@ -59,7 +59,8 @@ namespace TK.Blast
                 var levelData = JsonConvert.DeserializeObject<LevelData>(jsonText);
                 if (levelData?.LevelNumber != levelNumber)
                 {
-                    Debug.LogError($"Level number mismatch in {levelFileName}.json: Expected {levelNumber}, got {levelData?.LevelNumber}");
+                    Debug.LogError(
+                        $"Level number mismatch in {levelFileName}.json: Expected {levelNumber}, got {levelData?.LevelNumber}");
                     return null;
                 }
 

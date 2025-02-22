@@ -11,7 +11,7 @@ namespace TK.Blast
         public static event Action<int> OnLevelStarted;
         public static event Action<int, bool> OnLevelFinished;
         public static event Action<int> OnMoveCountChanged;
-        public static event Action<GridElementType> OnObstacleCountChanged;
+        public static event Action<ObstacleKind> OnObstacleCountChanged;
 
         private const string REACHED_LEVEL_INDEX_KEY = "tk.blast.reachedLevelIndex";
         private static int? s_reachedLevelIndex;
@@ -37,7 +37,7 @@ namespace TK.Blast
         public static int HighestCompletedLevelNo => ReachedLevelIndex;
         public static int ReachedLevelNo => ReachedLevelIndex + 1;
         public static int TotalLevelCount => LevelLoader.TotalLevelCount;
-        private static Dictionary<GridElementType, int> s_goalsDict;
+        private static Dictionary<ObstacleKind, int> s_goalsDict;
 
         public static int RemainingMoveCount
         {
@@ -79,15 +79,17 @@ namespace TK.Blast
             }
         }
 
-        private static void OnCellCleared(GridElementType elementType)
+        private static void OnCellCleared(GridElementModel elementModel)
         {
-            if (!elementType.IsObstacle()) return;
-            if (!s_goalsDict.ContainsKey(elementType)) return;
+            if (!elementModel.ElementType.IsObstacle()) return;
 
-            var count = --s_goalsDict[elementType];
-            if (count == 0) s_goalsDict.Remove(elementType);
+            var obstacleKind = ((ObstacleModel)elementModel).Kind;
+            if (!s_goalsDict.ContainsKey(obstacleKind)) return;
 
-            OnObstacleCountChanged?.Invoke(elementType);
+            var count = --s_goalsDict[obstacleKind];
+            if (count == 0) s_goalsDict.Remove(obstacleKind);
+
+            OnObstacleCountChanged?.Invoke(obstacleKind);
             if (s_goalsDict.Count == 0) // if all goals are completed
             {
                 FinishLevel(true);
@@ -161,15 +163,16 @@ namespace TK.Blast
                 RemainingMoveCount = levelData.MoveCount;
 
                 // Initialize goals
-                s_goalsDict = new Dictionary<GridElementType, int>();
+                s_goalsDict = new Dictionary<ObstacleKind, int>();
                 foreach (var elementCode in levelData.Grid)
                 {
-                    var elementType = LevelLoader.ParseElementType(elementCode);
-                    if (elementType == null || !elementType.Value.IsObstacle()) continue;
+                    var elementModel = LevelLoader.ParseElement(elementCode);
+                    if (elementModel == null || !elementModel.ElementType.IsObstacle()) continue;
 
-                    if (!s_goalsDict.TryAdd(elementType.Value, 1))
+                    var obstacleKind = ((ObstacleModel)elementModel).Kind;
+                    if (!s_goalsDict.TryAdd(obstacleKind, 1))
                     {
-                        s_goalsDict[elementType.Value]++;
+                        s_goalsDict[obstacleKind]++;
                     }
                 }
 
@@ -177,7 +180,6 @@ namespace TK.Blast
                 var gameplayLayout = await UIManager.GetUIAsync<GameplayLayout>();
                 gameplayLayout.Init(RemainingMoveCount, s_goalsDict);
                 await gameplayLayout.ShowAsync();
-
 
                 // Subscribe to move events
                 GridManager.OnMovePerformed += OnMovePerformed;
