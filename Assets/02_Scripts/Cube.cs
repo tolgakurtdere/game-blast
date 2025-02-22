@@ -19,9 +19,13 @@ namespace TK.Blast
             _defaultState = SpriteRenderer.sprite;
         }
 
-        public void ShowRocketIndicator(bool show)
+        public void SetState(GridElementType? elementType = null)
         {
-            SpriteRenderer.sprite = show ? rocketState : _defaultState;
+            SpriteRenderer.sprite = elementType switch
+            {
+                GridElementType.VerticalRocket or GridElementType.HorizontalRocket => rocketState,
+                _ => _defaultState
+            };
         }
 
         protected override void OnClick()

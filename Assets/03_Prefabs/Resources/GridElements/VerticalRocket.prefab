@@ -356,5 +356,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   elementType: 4
+  rocketDefault: {fileID: 5104587185727462653}
   rocketRight: {fileID: 6161238016551654842}
   rocketLeft: {fileID: 5994014199667181098}

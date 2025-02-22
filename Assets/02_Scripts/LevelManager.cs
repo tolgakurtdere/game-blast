@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -71,16 +70,27 @@ namespace TK.Blast
             ReachedLevelIndex = levelNo - 1;
         }
 
-        public static async void RestartLevel()
+        private static void OnMovePerformed()
         {
-            try
+            RemainingMoveCount--;
+            if (RemainingMoveCount <= 0)
             {
-                await SceneManager.UnloadSceneAsync(1);
-                StartReachedLevel();
+                FinishLevel(false);
             }
-            catch (Exception e)
+        }
+
+        private static void OnCellCleared(GridElementType elementType)
+        {
+            if (!elementType.IsObstacle()) return;
+            if (!s_goalsDict.ContainsKey(elementType)) return;
+
+            var count = --s_goalsDict[elementType];
+            if (count == 0) s_goalsDict.Remove(elementType);
+
+            OnObstacleCountChanged?.Invoke(elementType);
+            if (s_goalsDict.Count == 0) // if all goals are completed
             {
-                Debug.LogError($"Error restarting level: {e.Message}");
+                FinishLevel(true);
             }
         }
 
@@ -94,6 +104,19 @@ namespace TK.Blast
             }
 
             _ = StartLevelAsync(levelNo);
+        }
+
+        public static async void RestartLevel()
+        {
+            try
+            {
+                await SceneManager.UnloadSceneAsync(1);
+                StartReachedLevel();
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"Error restarting level: {e.Message}");
+            }
         }
 
         private static async Task StartLevelAsync(int levelNo)
@@ -173,30 +196,6 @@ namespace TK.Blast
             }
         }
 
-        private static void OnMovePerformed()
-        {
-            RemainingMoveCount--;
-            if (RemainingMoveCount <= 0)
-            {
-                FinishLevel(false);
-            }
-        }
-
-        private static void OnCellCleared(GridElementType elementType)
-        {
-            if (!elementType.IsObstacle()) return;
-            if (!s_goalsDict.ContainsKey(elementType)) return;
-
-            var count = --s_goalsDict[elementType];
-            if (count == 0) s_goalsDict.Remove(elementType);
-
-            OnObstacleCountChanged?.Invoke(elementType);
-            if (s_goalsDict.Count == 0) // if all goals are completed
-            {
-                FinishLevel(true);
-            }
-        }
-
         public static async void FinishLevel(bool isSucceed)
         {
             try
@@ -226,6 +225,8 @@ namespace TK.Blast
             // Update progress
             ReachedLevelIndex++;
 
+            // TODO: wait till the animation end
+
             // Play celebration particles
             await ParticleManager.PlayCelebrationAsync();
 
@@ -235,6 +236,8 @@ namespace TK.Blast
 
         private static async Task HandleLoseAsync()
         {
+            // TODO: wait till the animation end
+
             var failPopup = await UIManager.GetUIAsync<FailPopup>();
             await failPopup.ShowAsync();
         }

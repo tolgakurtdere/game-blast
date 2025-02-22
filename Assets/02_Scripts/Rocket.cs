@@ -14,6 +14,7 @@ namespace TK.Blast
             // GridElementType.VerticalRocket
         };
 
+        [SerializeField] private Transform rocketDefault;
         [SerializeField] private Transform rocketRight;
         [SerializeField] private Transform rocketLeft;
         private const float EXPLOSION_SPEED = 0.5f;
@@ -28,57 +29,53 @@ namespace TK.Blast
         public override async Task<bool> Perform(bool vfx)
         {
             IsActive = false;
-            transform.GetChild(0).gameObject.SetActive(false);
+            rocketDefault.gameObject.SetActive(false);
             rocketRight.gameObject.SetActive(true);
             rocketLeft.gameObject.SetActive(true);
             Highlight();
 
             var seq = DOTween.Sequence().SetEase(Ease.Linear);
-            var sourceCoord = Coordinate;
 
             // Animate rocket parts based on type and clear cells during movement
             switch (ElementType)
             {
                 case GridElementType.HorizontalRocket:
-                    AnimateHorizontalRocket(seq, sourceCoord);
+                    AnimateHorizontalRocket(seq);
                     break;
                 case GridElementType.VerticalRocket:
-                    AnimateVerticalRocket(seq, sourceCoord);
+                    AnimateVerticalRocket(seq);
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(ElementType), ElementType, "Invalid rocket type");
             }
 
-            try
-            {
-                await seq.AsyncWaitForCompletionWithCancellation(destroyCancellationToken);
-            }
-            catch (TaskCanceledException)
-            {
-                seq.Kill();
-                return true;
-            }
+            await seq.AsyncWaitForCompletion();
 
             Destroy();
             return true;
         }
 
-        private void AnimateHorizontalRocket(Sequence seq, Vector2Int sourceCoord)
+        private void AnimateHorizontalRocket(Sequence seq)
         {
             var rightTargets = new List<Vector2Int>();
             var leftTargets = new List<Vector2Int>();
             var gridCenter = GridManager.Instance.GridCenter;
+            var row = GridManager.Instance.GetRow(Coordinate.y);
+            foreach (var rowIndex in row)
+            {
+                GridManager.Instance.PerformCell(rowIndex);
+            }
 
             // Animate right part
             seq.Join(rocketRight.DOMoveX(gridCenter.x + EXPLOSION_DISTANCE, EXPLOSION_SPEED)
                 .OnUpdate(() =>
                 {
                     var currentX = Mathf.RoundToInt((rocketRight.position.x - transform.position.x) / GridManager.CELL_SIZE);
-                    var targetCoord = new Vector2Int(sourceCoord.x + currentX, sourceCoord.y);
+                    var targetCoord = new Vector2Int(Coordinate.x + currentX, Coordinate.y);
                     if (!rightTargets.Contains(targetCoord))
                     {
                         rightTargets.Add(targetCoord);
-                        GridManager.Instance.TryPerformCell(targetCoord);
+                        // GridManager.Instance.TryPerformCell(targetCoord);
                     }
                 }));
 
@@ -87,31 +84,37 @@ namespace TK.Blast
                 .OnUpdate(() =>
                 {
                     var currentX = Mathf.RoundToInt((rocketLeft.position.x - transform.position.x) / GridManager.CELL_SIZE);
-                    var targetCoord = new Vector2Int(sourceCoord.x + currentX, sourceCoord.y);
+                    var targetCoord = new Vector2Int(Coordinate.x + currentX, Coordinate.y);
                     if (!leftTargets.Contains(targetCoord))
                     {
                         leftTargets.Add(targetCoord);
-                        GridManager.Instance.TryPerformCell(targetCoord);
+                        // GridManager.Instance.TryPerformCell(targetCoord);
                     }
                 }));
         }
 
-        private void AnimateVerticalRocket(Sequence seq, Vector2Int sourceCoord)
+        private void AnimateVerticalRocket(Sequence seq)
         {
             var upTargets = new List<Vector2Int>();
             var downTargets = new List<Vector2Int>();
             var gridCenter = GridManager.Instance.GridCenter;
+            var column = GridManager.Instance.GetColumn(Coordinate.x);
+            foreach (var columnIndex in column)
+            {
+                Debug.LogError(columnIndex);
+                GridManager.Instance.PerformCell(columnIndex);
+            }
 
             // Animate up part
             seq.Join(rocketRight.DOMoveY(gridCenter.y + EXPLOSION_DISTANCE, EXPLOSION_SPEED)
                 .OnUpdate(() =>
                 {
                     var currentY = Mathf.RoundToInt((rocketRight.position.y - transform.position.y) / GridManager.CELL_SIZE);
-                    var targetCoord = new Vector2Int(sourceCoord.x, sourceCoord.y + currentY);
+                    var targetCoord = new Vector2Int(Coordinate.x, Coordinate.y + currentY);
                     if (!upTargets.Contains(targetCoord))
                     {
                         upTargets.Add(targetCoord);
-                        GridManager.Instance.TryPerformCell(targetCoord);
+                        // GridManager.Instance.TryPerformCell(targetCoord);
                     }
                 }));
 
@@ -120,11 +123,11 @@ namespace TK.Blast
                 .OnUpdate(() =>
                 {
                     var currentY = Mathf.RoundToInt((rocketLeft.position.y - transform.position.y) / GridManager.CELL_SIZE);
-                    var targetCoord = new Vector2Int(sourceCoord.x, sourceCoord.y + currentY);
+                    var targetCoord = new Vector2Int(Coordinate.x, Coordinate.y + currentY);
                     if (!downTargets.Contains(targetCoord))
                     {
                         downTargets.Add(targetCoord);
-                        GridManager.Instance.TryPerformCell(targetCoord);
+                        // GridManager.Instance.TryPerformCell(targetCoord);
                     }
                 }));
         }

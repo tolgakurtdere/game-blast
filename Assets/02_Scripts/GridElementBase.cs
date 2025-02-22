@@ -52,6 +52,11 @@ namespace TK.Blast
             SpriteRenderer.sortingOrder = order;
         }
 
+        public Tween CombineTo(Vector2 to)
+        {
+            return MoveInternal(to, 0.2f).SetEase(Ease.InBack);
+        }
+
         public Tween Move(Vector2 to, Ease ease = Ease.InOutSine, float duration = 0.3f)
         {
             return MoveInternal(to, duration).SetEase(ease);
