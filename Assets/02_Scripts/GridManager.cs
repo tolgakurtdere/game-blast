@@ -34,8 +34,8 @@ namespace TK.Blast
         private Vector2[,] _coordinates;
         private readonly HashSet<Vector2Int> _matchedCoordinates = new();
 
-        private int GridWidth { get; set; }
-        private int GridHeight { get; set; }
+        public int GridWidth { get; private set; }
+        public int GridHeight { get; private set; }
         public bool IsGridActive { get; private set; }
         public Vector2 GridCenter => border.transform.position;
 
@@ -163,6 +163,7 @@ namespace TK.Blast
                     var element = _grid[coord.x, coord.y];
                     if (!element || !element.ElementType.IsCube()) continue;
 
+                    element.Highlight();
                     seq.Join(element.Move(_coordinates[sourceCoord.x, sourceCoord.y], Ease.InBack));
                 }
             }
@@ -172,7 +173,7 @@ namespace TK.Blast
             // Clear matched cells after animation
             foreach (var coord in _matchedCoordinates)
             {
-                await PerformCell(coord);
+                await PerformCell(coord, !shouldCreateRocket);
             }
 
             if (shouldCreateRocket)
@@ -230,12 +231,12 @@ namespace TK.Blast
             _ = PerformCell(coord);
         }
 
-        public async Task PerformCell(Vector2Int coord)
+        public async Task PerformCell(Vector2Int coord, bool vfx = true)
         {
             var gridElement = _grid[coord.x, coord.y];
             if (!gridElement) return;
 
-            var isCleared = await gridElement.Perform();
+            var isCleared = await gridElement.Perform(vfx);
             if (isCleared)
             {
                 _grid[coord.x, coord.y] = null;
@@ -287,11 +288,8 @@ namespace TK.Blast
 
         private void ProcessColumn(int x, Sequence seq)
         {
-            var emptySpacesCount = CountEmptySpacesBelow(x);
-            if (emptySpacesCount == 0) return;
-
             MoveExistingElementsDown(x, seq);
-            FillEmptySpaces(x, emptySpacesCount, seq);
+            FillEmptySpaces(x, seq);
         }
 
         private int CountEmptySpacesBelow(int x, int targetY = -1)
@@ -328,8 +326,9 @@ namespace TK.Blast
             }
         }
 
-        private void FillEmptySpaces(int x, int emptySpacesCount, Sequence seq)
+        private void FillEmptySpaces(int x, Sequence seq)
         {
+            var emptySpacesCount = CountEmptySpacesBelow(x);
             for (var i = 0; i < emptySpacesCount; i++)
             {
                 var y = GridHeight - 1 - i;

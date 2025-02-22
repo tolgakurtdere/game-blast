@@ -17,7 +17,7 @@ namespace TK.Blast
         [SerializeField] private Transform rocketRight;
         [SerializeField] private Transform rocketLeft;
         private const float EXPLOSION_SPEED = 0.5f;
-        private const float EXPLOSION_DISTANCE = 15f;
+        private const float EXPLOSION_DISTANCE = 10f;
 
         protected override void OnClick()
         {
@@ -25,12 +25,13 @@ namespace TK.Blast
             GridManager.Instance.PerformRocket(Coordinate);
         }
 
-        public override async Task<bool> Perform()
+        public override async Task<bool> Perform(bool vfx)
         {
             IsActive = false;
             transform.GetChild(0).gameObject.SetActive(false);
             rocketRight.gameObject.SetActive(true);
             rocketLeft.gameObject.SetActive(true);
+            Highlight();
 
             var seq = DOTween.Sequence().SetEase(Ease.Linear);
             var sourceCoord = Coordinate;

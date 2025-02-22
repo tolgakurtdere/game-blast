@@ -5,7 +5,7 @@ namespace TK.Blast.Editor
 {
     public static class LevelManagerEditor
     {
-        [MenuItem("Game/Set Last Played Level")]
+        [MenuItem("TEST/Set Last Played Level")]
         private static void SetLevelWithInput()
         {
             var currentLevel = LevelManager.ReachedLevelNo;

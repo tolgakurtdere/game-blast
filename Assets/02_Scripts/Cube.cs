@@ -10,6 +10,7 @@ namespace TK.Blast
             new() { ElementType, GridElementType.Box, GridElementType.Vase };
 
         [SerializeField] private Sprite rocketState;
+        [SerializeField] private ParticleSystem crackFx;
         private Sprite _defaultState;
 
         protected override void Awake()
@@ -29,8 +30,14 @@ namespace TK.Blast
             GridManager.Instance.PerformMatching(Coordinate);
         }
 
-        public override Task<bool> Perform()
+        public override Task<bool> Perform(bool vfx)
         {
+            if (vfx)
+            {
+                crackFx.transform.SetParent(null);
+                crackFx.Play();
+            }
+
             Destroy();
             return Task.FromResult(true);
         }
