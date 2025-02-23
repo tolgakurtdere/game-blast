@@ -26,13 +26,21 @@ namespace TK.Blast
             return new RocketModel(direction);
         }
 
-        public override async Task<bool> Perform(bool vfx)
+        public override bool Interact()
         {
             IsActive = false;
             rocketDefault.gameObject.SetActive(false);
             rocketRight.gameObject.SetActive(true);
             rocketLeft.gameObject.SetActive(true);
             Highlight();
+            _ = FireRocket();
+
+            return true;
+        }
+
+        private async Task FireRocket()
+        {
+            GridManager.Instance.ActiveSpecialElementCount++;
 
             var tween = direction switch
             {
@@ -42,9 +50,8 @@ namespace TK.Blast
             };
 
             await tween.AsyncWaitForCompletion();
-
+            GridManager.Instance.ActiveSpecialElementCount--;
             Destroy();
-            return true;
         }
 
         private Tween AnimateHorizontalRocket()
@@ -84,7 +91,7 @@ namespace TK.Blast
                 var coord = cells[i];
                 var pos = GridManager.Instance.GetCellPosition(coord);
                 rightSeq.Append(rocketRight.DOMove(pos, ANIMATION_UNIT_DURATION)
-                    .OnComplete(() => GridManager.Instance.TryPerformCell(coord)));
+                    .OnComplete(() => GridManager.Instance.TryInteractCell(coord)));
             }
 
             // Backward animation
@@ -93,7 +100,7 @@ namespace TK.Blast
                 var coord = cells[i];
                 var pos = GridManager.Instance.GetCellPosition(coord);
                 leftSeq.Append(rocketLeft.DOMove(pos, ANIMATION_UNIT_DURATION)
-                    .OnComplete(() => GridManager.Instance.TryPerformCell(coord)));
+                    .OnComplete(() => GridManager.Instance.TryInteractCell(coord)));
             }
 
             // Final animations

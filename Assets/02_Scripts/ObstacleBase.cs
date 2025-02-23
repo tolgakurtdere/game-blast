@@ -1,4 +1,3 @@
-using System.Threading.Tasks;
 using UnityEngine;
 
 namespace TK.Blast
@@ -9,7 +8,7 @@ namespace TK.Blast
         private ObstacleModel ObstacleModel => (ObstacleModel)Model;
         protected int Hp => ObstacleModel.Hp;
 
-        public override Task<bool> Perform(bool vfx)
+        public override bool Interact()
         {
             ObstacleModel.DecreaseHp();
             OnHpChanged();
@@ -20,7 +19,7 @@ namespace TK.Blast
             var isCleared = Hp <= 0;
             if (isCleared) Destroy();
 
-            return Task.FromResult(isCleared);
+            return isCleared;
         }
 
         protected virtual void OnHpChanged()

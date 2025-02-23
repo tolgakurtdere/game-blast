@@ -90,8 +90,7 @@ public record RocketModel(RocketDirection Direction)
 
     public override bool CanMatchWith(GridElementModel model)
     {
-        // return model.Type == GridElementType.Rocket;
-        return false;
+        return model.ElementType == GridElementType.Rocket;
     }
 }
 

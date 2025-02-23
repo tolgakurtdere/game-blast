@@ -1,4 +1,3 @@
-using System.Threading.Tasks;
 using DG.Tweening;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -20,7 +19,7 @@ namespace TK.Blast
         public Vector2Int Coordinate => Model.Coordinate;
 
         protected abstract GridElementModel Initialize();
-        public abstract Task<bool> Perform(bool vfx);
+        public abstract bool Interact();
 
         private void Awake()
         {
@@ -66,6 +65,7 @@ namespace TK.Blast
 
         public Tween CombineTo(Vector2 to)
         {
+            Highlight();
             return MoveInternal(to, 0.2f).SetEase(Ease.InBack);
         }
 

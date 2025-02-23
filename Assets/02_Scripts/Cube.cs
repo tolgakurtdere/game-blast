@@ -1,4 +1,3 @@
-using System.Threading.Tasks;
 using UnityEngine;
 
 namespace TK.Blast
@@ -31,16 +30,12 @@ namespace TK.Blast
             GridManager.Instance.PerformMatching(Coordinate);
         }
 
-        public override Task<bool> Perform(bool vfx)
+        public override bool Interact()
         {
-            if (vfx)
-            {
-                crackFx.transform.SetParent(null);
-                crackFx.Play();
-            }
-
+            crackFx.transform.SetParent(null);
+            crackFx.Play();
             Destroy();
-            return Task.FromResult(true);
+            return true;
         }
     }
 }

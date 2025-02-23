@@ -33,6 +33,22 @@ namespace TK.Blast
         private GridElementBase[,] _grid;
         private Vector2[,] _cellPositions;
         private int _activeSpecialElementCount;
+        private TaskCompletionSource<bool> _tcs;
+
+        public int ActiveSpecialElementCount
+        {
+            get => _activeSpecialElementCount;
+            set
+            {
+                if (_activeSpecialElementCount == value) return;
+                _activeSpecialElementCount = value;
+                if (value == 0)
+                {
+                    _tcs?.TrySetResult(true);
+                    _ = Fall();
+                }
+            }
+        }
 
         public int GridWidth { get; private set; }
         public int GridHeight { get; private set; }
@@ -51,6 +67,7 @@ namespace TK.Blast
             CleanupExistingGrid();
             InitializeGrid(levelData);
 
+            _activeSpecialElementCount = 0;
             IsGridActive = true;
         }
 
@@ -63,7 +80,7 @@ namespace TK.Blast
                 for (var y = 0; y < _grid.GetLength(1); y++)
                 {
                     var element = _grid[x, y];
-                    if (element) element.Destroy();
+                    if (element) Destroy(element.gameObject);
                 }
             }
 
@@ -163,41 +180,90 @@ namespace TK.Blast
                     var element = _grid[coord.x, coord.y];
                     if (!element || !element.ElementType.IsCube()) continue;
 
-                    element.Highlight();
-                    seq.Join(element.CombineTo(GetCellPosition(sourceCoord)));
+                    seq.Join(element.CombineTo(GetCellPosition(sourceCoord)).OnComplete(() => ClearCell(coord, true)));
                 }
             }
 
             await seq.AsyncWaitForCompletion();
+            ClearCell(sourceCoord, true);
 
-            // Clear matched cells after animation
-            await Task.WhenAll(matchedCoords.Select(coord => PerformCellAsync(coord, specialItemType == null)));
-
-            if (specialItemType != null)
+            foreach (var matchedCoord in matchedCoords)
             {
-                switch (specialItemType.Value)
-                {
-                    case GridElementType.Rocket:
-                        var rocketPrefab = GridElementFactory.CreateRandomRocket();
-                        var rocket = Instantiate(rocketPrefab, GetCellPosition(sourceCoord), Quaternion.identity, GridTransform);
-                        rocket.SetCoordinate(sourceCoord);
-                        _grid[sourceCoord.x, sourceCoord.y] = rocket;
-                        break;
-                }
+                InteractCell(matchedCoord);
             }
 
+            TryCreateSpecialItem(sourceCoord, specialItemType);
             await Fall();
+        }
+
+        private void TryCreateSpecialItem(Vector2Int sourceCoord, GridElementType? specialItemType)
+        {
+            if (specialItemType == null) return;
+            switch (specialItemType.Value)
+            {
+                case GridElementType.Rocket:
+                    var rocketPrefab = GridElementFactory.CreateRandomRocket();
+                    var rocket = Instantiate(rocketPrefab, GetCellPosition(sourceCoord), Quaternion.identity, GridTransform);
+                    rocket.SetCoordinate(sourceCoord);
+                    _grid[sourceCoord.x, sourceCoord.y] = rocket;
+                    break;
+            }
+        }
+
+        private void CreateRocketCombo(Vector2Int sourceCoord)
+        {
+            Rocket(sourceCoord + s_adjacentDirections[0], false);
+            Rocket(sourceCoord + s_adjacentDirections[1], true);
+            Rocket(sourceCoord + s_adjacentDirections[2], false);
+            Rocket(sourceCoord + s_adjacentDirections[3], true);
+            Rocket(sourceCoord, true);
+            Rocket(sourceCoord, false);
+            return;
+
+            void Rocket(Vector2Int coord, bool isVertical)
+            {
+                if (!IsValidCoordinate(coord)) return;
+
+                var rocketPrefab = GridElementFactory.CreateElement(isVertical ? RocketModel.Vertical : RocketModel.Horizontal);
+                var rocket = Instantiate(rocketPrefab, GetCellPosition(coord), Quaternion.identity, GridTransform);
+                rocket.SetCoordinate(coord);
+                rocket.Interact();
+            }
         }
 
         public async void PerformRocket(Vector2Int sourceCoord)
         {
             if (!IsGridActive) return;
             if (!IsValidCoordinate(sourceCoord)) return;
+            IsGridActive = false;
+
+            var matchedCoords = FindMatches(sourceCoord, (current, neighbor) =>
+            {
+                var currentElement = _grid[current.x, current.y];
+                var neighborElement = _grid[neighbor.x, neighbor.y];
+                return currentElement.CanMatchWith(neighborElement);
+            });
+
+            if (matchedCoords.Count > 1)
+            {
+                var seq = DOTween.Sequence();
+
+                foreach (var coord in matchedCoords)
+                {
+                    if (coord == sourceCoord) continue;
+                    var element = _grid[coord.x, coord.y];
+                    if (!element) continue;
+
+                    seq.Join(element.CombineTo(GetCellPosition(sourceCoord)).OnComplete(() => ClearCell(coord, true)));
+                }
+
+                await seq.AsyncWaitForCompletion();
+                ClearCell(sourceCoord, true);
+                CreateRocketCombo(sourceCoord);
+            }
 
             OnMovePerformed?.Invoke();
-
-            IsGridActive = false;
-            await PerformCellAsync(sourceCoord);
+            InteractCell(sourceCoord);
         }
 
         public Vector2Int[] GetRowCoords(int rowIndex)
@@ -243,15 +309,8 @@ namespace TK.Blast
             return _cellPositions[coord.x, coord.y];
         }
 
-        public void TryPerformCell(Vector2Int coord)
+        public async Task InteractAllSpecialElements()
         {
-            if (!IsValidCoordinate(coord)) return;
-            _ = PerformCellAsync(coord);
-        }
-
-        public async Task PerformAllSpecialElements()
-        {
-            var taskList = new List<Task>();
             for (var x = 0; x < GridWidth; x++)
             {
                 for (var y = 0; y < GridHeight; y++)
@@ -259,36 +318,39 @@ namespace TK.Blast
                     var element = _grid[x, y];
                     if (element && element.ElementType.IsSpecialElement())
                     {
-                        taskList.Add(PerformCellAsync(new Vector2Int(x, y)));
+                        InteractCell(new Vector2Int(x, y));
+                        await Task.Delay(200);
                     }
                 }
             }
 
-            await Task.WhenAll(taskList);
+            if (ActiveSpecialElementCount == 0) return;
+            _tcs = new TaskCompletionSource<bool>();
+            await _tcs.Task;
         }
 
-        private async Task PerformCellAsync(Vector2Int coord, bool vfx = true)
+        public void TryInteractCell(Vector2Int coord)
+        {
+            if (!IsValidCoordinate(coord)) return;
+            InteractCell(coord);
+        }
+
+        private void InteractCell(Vector2Int coord)
         {
             var element = _grid[coord.x, coord.y];
             if (!element || !element.IsActive) return;
 
-            if (element.ElementType.IsSpecialElement()) _activeSpecialElementCount++;
+            var isCleared = element.Interact();
+            if (isCleared) ClearCell(coord);
+        }
 
-            var isCleared = await element.Perform(vfx);
-            if (isCleared)
-            {
-                _grid[coord.x, coord.y] = null;
-                OnCellCleared?.Invoke(element.Model);
+        private void ClearCell(Vector2Int coord, bool destroyElement = false)
+        {
+            var element = _grid[coord.x, coord.y];
+            _grid[coord.x, coord.y] = null;
+            OnCellCleared?.Invoke(element.Model);
 
-                if (element.ElementType.IsSpecialElement())
-                {
-                    _activeSpecialElementCount--;
-                    if (_activeSpecialElementCount == 0)
-                    {
-                        await Fall();
-                    }
-                }
-            }
+            if (destroyElement) element.Destroy();
         }
 
         private bool IsValidCoordinate(Vector2Int coord)

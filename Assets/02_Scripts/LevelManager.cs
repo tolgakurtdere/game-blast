@@ -256,7 +256,7 @@ namespace TK.Blast
             ReachedLevelIndex++;
 
             // Perform remaining special elements as rockets
-            await GridManager.Instance.PerformAllSpecialElements();
+            await GridManager.Instance.InteractAllSpecialElements();
 
             // Play celebration particles
             await ParticleManager.PlayCelebrationAsync();
