@@ -11,7 +11,6 @@ namespace TK.Blast
         {
             if (!Instance?.celebrationParticles)
             {
-                await Task.Delay(5000);
                 Debug.LogWarning("Celebration particles not assigned!");
                 return;
             }

@@ -35,7 +35,7 @@ namespace TK.Blast
             return elementType == GridElementType.Cube;
         }
 
-        public static bool IsRocket(this GridElementType elementType)
+        public static bool IsSpecialElement(this GridElementType elementType)
         {
             return elementType == GridElementType.Rocket;
         }

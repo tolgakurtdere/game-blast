@@ -16,6 +16,8 @@ namespace TK.Blast
         private const string REACHED_LEVEL_INDEX_KEY = "tk.blast.reachedLevelIndex";
         private static int? s_reachedLevelIndex;
         private static int s_remainingMoveCount;
+        private static Dictionary<ObstacleKind, int> s_goalsDict;
+        private static bool s_isLevelEnding;
 
         private static int ReachedLevelIndex
         {
@@ -37,7 +39,6 @@ namespace TK.Blast
         public static int HighestCompletedLevelNo => ReachedLevelIndex;
         public static int ReachedLevelNo => ReachedLevelIndex + 1;
         public static int TotalLevelCount => LevelLoader.TotalLevelCount;
-        private static Dictionary<ObstacleKind, int> s_goalsDict;
 
         public static int RemainingMoveCount
         {
@@ -73,9 +74,12 @@ namespace TK.Blast
         private static void OnMovePerformed()
         {
             RemainingMoveCount--;
+
+            // Check if we ran out of moves
             if (RemainingMoveCount <= 0)
             {
-                FinishLevel(false);
+                s_isLevelEnding = true;
+                UIManager.SetDisablerOverlay(true);
             }
         }
 
@@ -90,9 +94,30 @@ namespace TK.Blast
             if (count == 0) s_goalsDict.Remove(obstacleKind);
 
             OnObstacleCountChanged?.Invoke(obstacleKind);
-            if (s_goalsDict.Count == 0) // if all goals are completed
+
+            // Check if all goals are completed
+            if (s_goalsDict.Count == 0)
+            {
+                s_isLevelEnding = true;
+                UIManager.SetDisablerOverlay(true);
+            }
+        }
+
+        private static void OnFallCompleted()
+        {
+            if (!s_isLevelEnding) return;
+
+            // Check if all goals are completed
+            if (s_goalsDict.Count == 0)
             {
                 FinishLevel(true);
+                return;
+            }
+
+            // Then check if we ran out of moves
+            if (RemainingMoveCount <= 0)
+            {
+                FinishLevel(false);
             }
         }
 
@@ -131,6 +156,7 @@ namespace TK.Blast
 
             try
             {
+                s_isLevelEnding = false;
                 CurrentLevelNo = levelNo;
                 UIManager.SetDisablerOverlay(true);
 
@@ -184,6 +210,7 @@ namespace TK.Blast
                 // Subscribe to move events
                 GridManager.OnMovePerformed += OnMovePerformed;
                 GridManager.OnCellCleared += OnCellCleared;
+                GridManager.OnFallCompleted += OnFallCompleted;
 
                 // Notify level start
                 OnLevelStarted?.Invoke(levelNo);
@@ -206,6 +233,7 @@ namespace TK.Blast
 
                 GridManager.OnMovePerformed -= OnMovePerformed;
                 GridManager.OnCellCleared -= OnCellCleared;
+                GridManager.OnFallCompleted -= OnFallCompleted;
 
                 if (isSucceed) await HandleWinAsync();
                 else await HandleLoseAsync();
@@ -227,7 +255,8 @@ namespace TK.Blast
             // Update progress
             ReachedLevelIndex++;
 
-            // TODO: wait till the animation end
+            // Perform remaining special elements as rockets
+            await GridManager.Instance.PerformAllSpecialElements();
 
             // Play celebration particles
             await ParticleManager.PlayCelebrationAsync();
@@ -238,8 +267,6 @@ namespace TK.Blast
 
         private static async Task HandleLoseAsync()
         {
-            // TODO: wait till the animation end
-
             var failPopup = await UIManager.GetUIAsync<FailPopup>();
             await failPopup.ShowAsync();
         }
