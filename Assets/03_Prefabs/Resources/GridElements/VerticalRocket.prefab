@@ -116,7 +116,8 @@ Transform:
   m_LocalPosition: {x: 0, y: 0.2, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 7081711214533876770}
   m_Father: {fileID: 860189921196539035}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!212 &9213247276446600737
@@ -203,7 +204,8 @@ Transform:
   m_LocalPosition: {x: 0, y: -0.2, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 1643232308303481164}
   m_Father: {fileID: 860189921196539035}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!212 &4071808491714197813
@@ -359,3 +361,139 @@ MonoBehaviour:
   rocketDefault: {fileID: 5104587185727462653}
   rocketRight: {fileID: 6161238016551654842}
   rocketLeft: {fileID: 5994014199667181098}
+  trailFxRight: {fileID: 6987226696382999088}
+  trailFxLeft: {fileID: 1476398277827379038}
+--- !u!1001 &2347061634064727278
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 6161238016551654842}
+    m_Modifications:
+    - target: {fileID: 4815820018825633996, guid: 933e830d0f6364333827a5787194f971, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4815820018825633996, guid: 933e830d0f6364333827a5787194f971, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: -0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 4815820018825633996, guid: 933e830d0f6364333827a5787194f971, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4815820018825633996, guid: 933e830d0f6364333827a5787194f971, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4815820018825633996, guid: 933e830d0f6364333827a5787194f971, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4815820018825633996, guid: 933e830d0f6364333827a5787194f971, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4815820018825633996, guid: 933e830d0f6364333827a5787194f971, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4815820018825633996, guid: 933e830d0f6364333827a5787194f971, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4815820018825633996, guid: 933e830d0f6364333827a5787194f971, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4815820018825633996, guid: 933e830d0f6364333827a5787194f971, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4818758602448800886, guid: 933e830d0f6364333827a5787194f971, type: 3}
+      propertyPath: m_Name
+      value: RocketTrailEffect
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 933e830d0f6364333827a5787194f971, type: 3}
+--- !u!198 &6987226696382999088 stripped
+ParticleSystem:
+  m_CorrespondingSourceObject: {fileID: 4640376365192369886, guid: 933e830d0f6364333827a5787194f971, type: 3}
+  m_PrefabInstance: {fileID: 2347061634064727278}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &7081711214533876770 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 4815820018825633996, guid: 933e830d0f6364333827a5787194f971, type: 3}
+  m_PrefabInstance: {fileID: 2347061634064727278}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1001 &6059828451166054784
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 5994014199667181098}
+    m_Modifications:
+    - target: {fileID: 4815820018825633996, guid: 933e830d0f6364333827a5787194f971, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4815820018825633996, guid: 933e830d0f6364333827a5787194f971, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 4815820018825633996, guid: 933e830d0f6364333827a5787194f971, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4815820018825633996, guid: 933e830d0f6364333827a5787194f971, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4815820018825633996, guid: 933e830d0f6364333827a5787194f971, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4815820018825633996, guid: 933e830d0f6364333827a5787194f971, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4815820018825633996, guid: 933e830d0f6364333827a5787194f971, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4815820018825633996, guid: 933e830d0f6364333827a5787194f971, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4815820018825633996, guid: 933e830d0f6364333827a5787194f971, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4815820018825633996, guid: 933e830d0f6364333827a5787194f971, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4818758602448800886, guid: 933e830d0f6364333827a5787194f971, type: 3}
+      propertyPath: m_Name
+      value: RocketTrailEffect
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 933e830d0f6364333827a5787194f971, type: 3}
+--- !u!198 &1476398277827379038 stripped
+ParticleSystem:
+  m_CorrespondingSourceObject: {fileID: 4640376365192369886, guid: 933e830d0f6364333827a5787194f971, type: 3}
+  m_PrefabInstance: {fileID: 6059828451166054784}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &1643232308303481164 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 4815820018825633996, guid: 933e830d0f6364333827a5787194f971, type: 3}
+  m_PrefabInstance: {fileID: 6059828451166054784}
+  m_PrefabAsset: {fileID: 0}

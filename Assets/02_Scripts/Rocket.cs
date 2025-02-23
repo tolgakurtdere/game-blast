@@ -11,6 +11,8 @@ namespace TK.Blast
         [SerializeField] private Transform rocketDefault;
         [SerializeField] private Transform rocketRight;
         [SerializeField] private Transform rocketLeft;
+        [SerializeField] private ParticleSystem trailFxRight;
+        [SerializeField] private ParticleSystem trailFxLeft;
         private const float ANIMATION_UNIT_DURATION = 0.05f;
 
         protected override void OnClick()
@@ -98,9 +100,17 @@ namespace TK.Blast
             const float finalDistance = GridManager.CELL_SIZE * 4;
             const float duration = ANIMATION_UNIT_DURATION * 4;
             rightSeq.Append(rightMoveFunc(finalDistance, duration).SetRelative())
-                .AppendCallback(() => rocketRight.gameObject.SetActive(false));
+                .AppendCallback(() =>
+                {
+                    trailFxRight.transform.SetParent(null);
+                    rocketRight.gameObject.SetActive(false);
+                });
             leftSeq.Append(leftMoveFunc(-finalDistance, duration).SetRelative())
-                .AppendCallback(() => rocketLeft.gameObject.SetActive(false));
+                .AppendCallback(() =>
+                {
+                    trailFxLeft.transform.SetParent(null);
+                    rocketLeft.gameObject.SetActive(false);
+                });
 
             return rightSeq.Insert(0, leftSeq);
         }
