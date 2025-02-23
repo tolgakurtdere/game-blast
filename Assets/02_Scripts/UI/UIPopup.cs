@@ -32,14 +32,12 @@ namespace TK.Blast
             _currentSequence?.Kill();
 
             // Setup initial state
-            canvasGroup.alpha = 0f;
             canvasGroup.interactable = false;
             canvasGroup.blocksRaycasts = true;
             popupHolder.anchoredPosition = _defaultAnchoredPosition + new Vector2(slideDistance, 0);
 
             // Create animation sequence
             _currentSequence = DOTween.Sequence()
-                .Join(canvasGroup.DOFade(1f, showDuration).SetEase(Ease.InCubic))
                 .Join(popupHolder.DOAnchorPos(_defaultAnchoredPosition, showDuration).SetEase(showEase));
 
             await _currentSequence.AsyncWaitForCompletion();
@@ -53,7 +51,6 @@ namespace TK.Blast
 
             // Create animation sequence
             _currentSequence = DOTween.Sequence()
-                .Join(canvasGroup.DOFade(0f, hideDuration).SetEase(Ease.InCubic))
                 .Join(popupHolder.DOAnchorPos(_defaultAnchoredPosition - new Vector2(slideDistance, 0), hideDuration).SetEase(hideEase));
 
             await _currentSequence.AsyncWaitForCompletion();
